@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { SITE } from "@/lib/config/site";
-import logoImg from "/public/708EF42A-E02E-487F-91D5-F03B44F921D8.png";
+import logoImg from "/708EF42A-E02E-487F-91D5-F03B44F921D8.png";
 
 export function Header() {
   return (
