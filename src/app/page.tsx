@@ -1,3 +1,8 @@
+import { ESCROW_RULES } from "@/lib/config/site";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+
 export default function HomePage() {
   return (
     <div className="space-y-0 pb-8">
@@ -31,7 +36,6 @@ export default function HomePage() {
 function WelcomeBlock() {
   return (
     <section className="relative overflow-hidden bg-surface-2 border-b border-line-subtle">
-      {/* Фоновое изображение замка */}
       <img
         src="/AADEF62D-15DC-44AE-880F-AEBCDF96F03A.png"
         alt=""
@@ -73,7 +77,9 @@ function WelcomeBlock() {
               <p className="text-xs text-ink-muted mb-4">
                 Получи доступ к уникальным возможностям и привилегиям CITADEL
               </p>
-              <Button className="w-full">Стать участником</Button>
+              <a href="/register">
+                <Button className="w-full">Стать участником</Button>
+              </a>
             </Card>
           </div>
         </div>
@@ -112,16 +118,20 @@ function AnnouncementBar() {
 // ==========================================================
 function ForumSections() {
   const sections = [
-    { name: "Новости платформы", desc: "Официальные новости, обновления и важные объявления", threads: 124, posts: 1890, icon: "📢" },
-    { name: "Правила и FAQ", desc: "Правила сообщества и ответы на частые вопросы", threads: 56, posts: 420, icon: "📋" },
-    { name: "Общий раздел", desc: "Свободное общение на любые темы", threads: 456, posts: 8230, icon: "💬" },
-    { name: "Предложения и идеи", desc: "Предлагайте идеи и улучшения для сообщества", threads: 89, posts: 1240, icon: "💡" },
-    { name: "Маркет услуг", desc: "Услуги и цифровые товары от участников", threads: 67, posts: 890, icon: "🏪" },
-    { name: "Гарант-сервис", desc: "Безопасные сделки через гаранта", threads: 45, posts: 670, icon: "🛡️" },
-    { name: "Работа и сотрудничество", desc: "Поиск партнёров и совместные проекты", threads: 98, posts: 1560, icon: "🤝" },
-    { name: "Техническая поддержка", desc: "Помощь и ответы на технические вопросы", threads: 34, posts: 520, icon: "🎧" },
-    { name: "Ресурсы и инструменты", desc: "Полезные материалы, инструменты и руководства", threads: 56, posts: 780, icon: "📚" },
-    { name: "VIP-раздел", desc: "Закрытый раздел для привилегированных участников", threads: 12, posts: 340, icon: "🔒", isVip: true },
+    { name: "Общий раздел", desc: "Свободное общение на любые темы", threads: 456, posts: 8230, slug: "general", icon: "💬" },
+    { name: "Новости платформы", desc: "Официальные новости и важные объявления", threads: 124, posts: 1890, slug: "news", icon: "📢" },
+    { name: "Правила и FAQ", desc: "Правила сообщества и ответы на вопросы", threads: 56, posts: 420, slug: "rules", icon: "📋" },
+    { name: "Маркет услуг", desc: "Услуги и цифровые товары от участников", threads: 67, posts: 890, slug: "market", icon: "🏪" },
+    { name: "Гарант-сервис", desc: "Безопасные сделки через гаранта", threads: 45, posts: 670, slug: "escrow", icon: "🛡️" },
+    { name: "Вакансии", desc: "Поиск работы и исполнителей", threads: 89, posts: 1240, slug: "vacancies", icon: "💼" },
+    { name: "Резюме", desc: "Портфолио и предложения специалистов", threads: 34, posts: 520, slug: "resumes", icon: "📄" },
+    { name: "Халява", desc: "Бесплатные материалы, курсы, раздачи", threads: 78, posts: 1560, slug: "freebies", icon: "🎁" },
+    { name: "Чат", desc: "Мгновенное общение в реальном времени", threads: 312, posts: 5600, slug: "chat", icon: "⚡" },
+    { name: "Предложения и идеи", desc: "Идеи и улучшения для сообщества", threads: 89, posts: 1240, slug: "ideas", icon: "💡" },
+    { name: "Работа и сотрудничество", desc: "Поиск партнёров и проекты", threads: 98, posts: 1560, slug: "work", icon: "🤝" },
+    { name: "Техническая поддержка", desc: "Помощь и ответы на вопросы", threads: 34, posts: 520, slug: "support", icon: "🎧" },
+    { name: "Ресурсы и инструменты", desc: "Полезные материалы и руководства", threads: 56, posts: 780, slug: "resources", icon: "📚" },
+    { name: "VIP-раздел", desc: "Закрытый раздел для привилегированных", threads: 12, posts: 340, slug: "vip", icon: "🔒", isVip: true },
   ];
 
   return (
@@ -129,22 +139,24 @@ function ForumSections() {
       <h2 className="font-display text-lg font-bold text-ink mb-3">Основные разделы</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {sections.map((s) => (
-          <Card key={s.name} variant={s.isVip ? "gold" : "interactive"} padding="sm">
-            <div className="flex items-start gap-3">
-              <span className="text-xl">{s.icon}</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-ink truncate">{s.name}</p>
-                  {s.isVip && <Badge variant="gold" size="sm">VIP</Badge>}
-                </div>
-                <p className="text-xs text-ink-muted mt-0.5 line-clamp-2">{s.desc}</p>
-                <div className="flex items-center gap-3 mt-1.5 text-2xs text-ink-faint">
-                  <span>Тем: {s.threads}</span>
-                  <span>Сооб: {s.posts}</span>
+          <a key={s.slug} href={`/forum/${s.slug}`}>
+            <Card variant={s.isVip ? "gold" : "interactive"} padding="sm">
+              <div className="flex items-start gap-3">
+                <span className="text-xl">{s.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-ink truncate">{s.name}</p>
+                    {s.isVip && <Badge variant="gold" size="sm">VIP</Badge>}
+                  </div>
+                  <p className="text-xs text-ink-muted mt-0.5 line-clamp-2">{s.desc}</p>
+                  <div className="flex items-center gap-3 mt-1.5 text-2xs text-ink-faint">
+                    <span>Тем: {s.threads}</span>
+                    <span>Сооб: {s.posts}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          </a>
         ))}
       </div>
     </section>
