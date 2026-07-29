@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge";
 interface DepositItem { id: string; userId: string; currency: string; amount: number; method: string; txId?: string; status: string; createdAt: string; }
 interface WithdrawalItem { id: string; userId: string; currency: string; amount: number; method: string; addressTo: string; status: string; createdAt: string; }
 interface AddressItem { currency: string; network: string; address: string; label: string; isActive: boolean; }
+interface AdItem { id: string; title: string; slot: string; media_url: string; media_type: string; link_url: string; is_active: boolean; priority: number; }
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<"deposits" | "withdrawals" | "manual" | "addresses" | "badges">("deposits");
+  const [tab, setTab] = useState<"deposits" | "withdrawals" | "manual" | "addresses" | "badges" | "ads">("deposits");
   const [deposits, setDeposits] = useState<DepositItem[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalItem[]>([]);
   const [addresses, setAddresses] = useState<AddressItem[]>([]);
@@ -43,6 +44,7 @@ export default function AdminPage() {
           { key: "manual", label: "Ручные операции" },
           { key: "addresses", label: "Адреса" },
           { key: "badges", label: "Плашки" },
+          { key: "ads", label: "Реклама" },
         ].map((t) => (
           <button
             key={t.key}
@@ -61,6 +63,7 @@ export default function AdminPage() {
       {tab === "manual" && <ManualTab />}
       {tab === "addresses" && <AddressesTab items={addresses} onRefresh={() => fetch("/api/admin/addresses").then(r => r.json()).then(setAddresses)} />}
       {tab === "badges" && <BadgesTab />}
+      {tab === "ads" && <AdsTab />}
     </div>
   );
 }
@@ -269,14 +272,6 @@ function BadgesTab() {
     refresh();
   }
 
-  async function deleteBadge(badgeId: string) {
-    await fetch("/api/admin/badges", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "delete", badgeId }),
-    });
-    refresh();
-  }
-
   function refresh() {
     fetch("/api/admin/badges").then(r => r.json()).then(d => {
       setBadges(d.badges || []);
@@ -322,6 +317,97 @@ function BadgesTab() {
             <Button size="sm" variant="danger" onClick={() => removeBadge(ub.userId, ub.badgeId)}>Снять</Button>
           </div>
         ))}
+      </Card>
+    </div>
+  );
+}
+
+// ==========================================================
+// РЕКЛАМА
+// ==========================================================
+function AdsTab() {
+  const [ads, setAds] = useState<AdItem[]>([]);
+  const [title, setTitle] = useState("");
+  const [slot, setSlot] = useState("hero_banner");
+  const [mediaUrl, setMediaUrl] = useState("");
+  const [mediaType, setMediaType] = useState("image");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [priority, setPriority] = useState("0");
+
+  useEffect(() => { fetch("/api/admin/ads").then(r => r.json()).then(d => setAds(Array.isArray(d) ? d : [])); }, []);
+
+  async function create() {
+    await fetch("/api/admin/ads", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, slot, mediaUrl, mediaType, linkUrl, priority: parseInt(priority) }),
+    });
+    setTitle(""); setMediaUrl(""); setLinkUrl("");
+    refresh();
+  }
+
+  async function toggle(id: string) {
+    await fetch("/api/admin/ads", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "toggle", id }) });
+    refresh();
+  }
+
+  async function remove(id: string) {
+    await fetch("/api/admin/ads", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete", id }) });
+    refresh();
+  }
+
+  function refresh() { fetch("/api/admin/ads").then(r => r.json()).then(d => setAds(Array.isArray(d) ? d : [])); }
+
+  return (
+    <div className="space-y-6 max-w-lg">
+      <Card padding="lg" className="space-y-3">
+        <p className="text-sm font-semibold text-ink">Добавить рекламный баннер</p>
+        <Input label="Название" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Баннер распродажи" />
+
+        <div>
+          <label className="text-xs text-ink-muted mb-1 block">Слот размещения</label>
+          <select value={slot} onChange={(e) => setSlot(e.target.value)} className="w-full bg-surface border border-line-subtle rounded-control px-3 py-2 text-sm text-ink">
+            <option value="hero_banner">Под приветственным блоком</option>
+            <option value="sidebar">Боковая колонка</option>
+            <option value="between_sections">Между разделами форума</option>
+          </select>
+        </div>
+
+        <div className="flex gap-2">
+          <select value={mediaType} onChange={(e) => setMediaType(e.target.value)} className="bg-surface border border-line-subtle rounded-control px-3 py-2 text-sm text-ink">
+            <option value="image">Картинка</option>
+            <option value="video">Видео</option>
+          </select>
+        </div>
+
+        <Input label="Ссылка на медиа (URL)" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} placeholder="https://i.imgur.com/..." />
+        <Input label="Ссылка для перехода (опционально)" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." />
+        <Input label="Приоритет (чем выше — тем раньше показывается)" type="number" value={priority} onChange={(e) => setPriority(e.target.value)} />
+        <Button size="sm" onClick={create}>Добавить баннер</Button>
+      </Card>
+
+      <Card padding="md">
+        <p className="text-sm font-semibold text-ink mb-3">Все баннеры</p>
+        {ads.length === 0 ? (
+          <p className="text-xs text-ink-muted text-center py-4">Баннеров пока нет</p>
+        ) : (
+          ads.map((a) => (
+            <div key={a.id} className="flex items-center justify-between py-2 border-b border-line-subtle last:border-0">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-ink truncate">{a.title}</p>
+                <p className="text-2xs text-ink-muted">{a.slot} · {a.media_type} · приоритет {a.priority}</p>
+              </div>
+              <div className="flex items-center gap-1">
+                <Badge variant={a.is_active ? "success" : "muted"} size="sm">
+                  {a.is_active ? "Активен" : "Выкл"}
+                </Badge>
+                <Button size="sm" variant="ghost" onClick={() => toggle(a.id)}>
+                  {a.is_active ? "🔵" : "⚫"}
+                </Button>
+                <Button size="sm" variant="danger" onClick={() => remove(a.id)}>✕</Button>
+              </div>
+            </div>
+          ))
+        )}
       </Card>
     </div>
   );
