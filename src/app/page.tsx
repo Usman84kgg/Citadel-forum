@@ -274,4 +274,8 @@ function OnlineNow() {
           ))}
         </div>
         <span className="text-xs text-ink-muted">+334</span>
-        <Badge variant="success"
+        <Badge variant="success" size="sm">127 онлайн</Badge>
+      </Card>
+    </section>
+  );
+}
