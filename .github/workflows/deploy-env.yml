@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'trigger-env-setup.txt'
+  workflow_dispatch:
 
 jobs:
   deploy-env:
@@ -16,34 +17,32 @@ jobs:
           curl -X POST "https://api.vercel.com/v10/projects/${{ secrets.VERCEL_PROJECT_ID }}/env" \
             -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{
-              "key": "DATABASE_URL",
-              "value": "${{ secrets.VERCEL_DB_URL_6543 }}",
-              "type": "encrypted",
-              "target": ["production", "preview", "development"]
-            }'
+            -d '{"key":"DATABASE_URL","value":"${{ secrets.VERCEL_DB_URL_6543 }}","type":"encrypted","target":["production","preview","development"]}'
 
       - name: Установка DIRECT_URL
         run: |
           curl -X POST "https://api.vercel.com/v10/projects/${{ secrets.VERCEL_PROJECT_ID }}/env" \
             -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{
-              "key": "DIRECT_URL",
-              "value": "${{ secrets.VERCEL_DB_URL_5432 }}",
-              "type": "encrypted",
-              "target": ["production", "preview", "development"]
-            }'
+            -d '{"key":"DIRECT_URL","value":"${{ secrets.VERCEL_DB_URL_5432 }}","type":"encrypted","target":["production","preview","development"]}'
+
+      - name: Установка AUTH_SECRET
+        run: |
+          curl -X POST "https://api.vercel.com/v10/projects/${{ secrets.VERCEL_PROJECT_ID }}/env" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"key":"AUTH_SECRET","value":"${{ secrets.VERCEL_AUTH_SECRET }}","type":"encrypted","target":["production","preview","development"]}'
+
+      - name: Установка CRON_SECRET
+        run: |
+          curl -X POST "https://api.vercel.com/v10/projects/${{ secrets.VERCEL_PROJECT_ID }}/env" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"key":"CRON_SECRET","value":"${{ secrets.VERCEL_CRON_SECRET }}","type":"encrypted","target":["production","preview","development"]}'
 
       - name: Запуск пересборки
         run: |
           curl -X POST "https://api.vercel.com/v13/deployments" \
             -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{
-              "name": "citadel-forum",
-              "gitSource": {
-                "ref": "main"
-              },
-              "target": "production"
-            }'
+            -d '{"name":"citadel-forum","gitSource":{"ref":"main"},"target":"production"}'
