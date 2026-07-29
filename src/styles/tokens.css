@@ -1,19 +1,8 @@
-/* ==========================================================
-   CITADEL — дизайн-токены
-
-   Все цвета, размеры и тени платформы собраны здесь.
-   Чтобы изменить оттенок золота на всём сайте,
-   достаточно поправить одну строку в этом файле.
-   ========================================================== */
-
 :root {
-  /* --- Фоны --- */
   --citadel-bg-base: #0a0a0b;
   --citadel-bg-surface: #111113;
   --citadel-bg-surface-2: #17171a;
   --citadel-bg-surface-3: #1d1d21;
-
-  /* --- Золото: фирменный акцент --- */
   --citadel-gold-100: #fbf3d9;
   --citadel-gold-200: #f6e5b4;
   --citadel-gold-300: #f0d07a;
@@ -22,25 +11,40 @@
   --citadel-gold-600: #b08d2a;
   --citadel-gold-700: #8b6f1f;
   --citadel-gold-800: #5f4b14;
-
-  /* --- Текст --- */
   --citadel-text-primary: #edeae3;
   --citadel-text-secondary: #b9b3a6;
   --citadel-text-muted: #8a8578;
   --citadel-text-faint: #5c584f;
-
-  /* --- Границы --- */
   --citadel-border-subtle: rgba(212, 175, 55, 0.1);
   --citadel-border-strong: rgba(212, 175, 55, 0.28);
   --citadel-border-gold: rgba(212, 175, 55, 0.55);
-
-  /* --- Статусы --- */
   --citadel-success: #3fbf7f;
   --citadel-warning: #e0a93b;
   --citadel-danger: #e05555;
   --citadel-info: #5b9bd5;
-
-  /* --- Статусы: приглушённые фоны --- */
   --citadel-success-bg: rgba(63, 191, 127, 0.12);
   --citadel-warning-bg: rgba(224, 169, 59, 0.12);
-  --citadel-danger-bg: rgba(224, 85, 85
+  --citadel-danger-bg: rgba(224, 85, 85, 0.12);
+  --citadel-info-bg: rgba(91, 155, 213, 0.12);
+  --citadel-header-height: 72px;
+  --citadel-nav-height: 48px;
+  --citadel-content-max: 1400px;
+  --citadel-radius-card: 16px;
+  --citadel-radius-panel: 14px;
+  --citadel-radius-control: 10px;
+  --citadel-transition-fast: 120ms;
+  --citadel-transition: 200ms;
+  --citadel-transition-slow: 360ms;
+  --citadel-z-header: 100;
+  --citadel-z-dropdown: 200;
+  --citadel-z-modal: 300;
+  --citadel-z-toast: 400;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --citadel-transition-fast: 0ms;
+    --citadel-transition: 0ms;
+    --citadel-transition-slow: 0ms;
+  }
+}
