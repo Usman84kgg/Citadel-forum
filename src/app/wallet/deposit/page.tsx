@@ -61,13 +61,12 @@ export default function DepositPage() {
     setSuccess(true);
   }
 
-  return (
-    <div className="citadel-container py-6 max-w-lg mx-auto space-y-6">
-      <h1 className="font-display text-2xl font-bold text-gold-400">
-        Пополнение
-      </h1>
-
-      {success ? (
+  if (success) {
+    return (
+      <div className="citadel-container py-6 max-w-lg mx-auto space-y-6">
+        <h1 className="font-display text-2xl font-bold text-gold-400">
+          Пополнение
+        </h1>
         <Card variant="gold" padding="lg" className="text-center">
           <p className="text-lg mb-2">✅</p>
           <p className="font-display text-lg font-bold text-gold-400">
@@ -85,83 +84,86 @@ export default function DepositPage() {
             Вернуться в кошелёк
           </Button>
         </Card>
-      ) : (
-        <>
-          <div className="flex gap-2">
-            {["USDT", "BTC"].map((cur) => (
-              <button
-                key={cur}
-                onClick={() => setSelectedCurrency(cur)}
-                className={`px-4 py-2 rounded-control text-sm font-medium transition-colors ${
-                  selectedCurrency === cur
-                    ? "bg-gold-500 text-black"
-                    : "bg-surface text-ink-muted hover:bg-surface-2"
-                }`}
-              >
-                {cur === "USDT" ? "USDT (TRC20)" : "Bitcoin"}
-              </button>
-            ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="citadel-container py-6 max-w-lg mx-auto space-y-6">
+      <h1 className="font-display text-2xl font-bold text-gold-400">
+        Пополнение
+      </h1>
+
+      <div className="flex gap-2">
+        {["USDT", "BTC"].map((cur) => (
+          <button
+            key={cur}
+            onClick={() => setSelectedCurrency(cur)}
+            className={`px-4 py-2 rounded-control text-sm font-medium transition-colors ${
+              selectedCurrency === cur
+                ? "bg-gold-500 text-black"
+                : "bg-surface text-ink-muted hover:bg-surface-2"
+            }`}
+          >
+            {cur === "USDT" ? "USDT (TRC20)" : "Bitcoin"}
+          </button>
+        ))}
+      </div>
+
+      {activeAddress ? (
+        <Card padding="md">
+          <p className="text-xs text-ink-muted mb-1">Адрес для пополнения</p>
+          <div className="flex items-center gap-2">
+            <!--CODEPH:0-->
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() =>
+                navigator.clipboard.writeText(activeAddress.address)
+              }
+            >
+              📋
+            </Button>
           </div>
-
-          {activeAddress ? (
-            <Card padding="md">
-              <p className="text-xs text-ink-muted mb-1">Адрес для пополнения</p>
-              <div className="flex items-center gap-2">
-                <!--CODEPH:0-->
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => navigator.clipboard.writeText(activeAddress.address)}
-                >
-                  📋
-                </Button>
-              </div>
-              <p className="text-2xs text-ink-faint mt-2">
-                Отправьте{" "}
-                {selectedCurrency === "USDT" ? "USDT TRC-20" : "BTC"}{" "}
-                на этот адрес и заполните форму ниже
-              </p>
-            </Card>
-          ) : (
-            <Card padding="md">
-              <p className="text-sm text-ink-muted text-center">
-                Адрес для {selectedCurrency} временно недоступен
-              </p>
-            </Card>
-          )}
-
-          <Card padding="lg">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <Input
-                label="Сумма (USD)"
-                type="number"
-                step="0.01"
-                min="10"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="Минимум $10"
-                required
-              />
-
-              <Input
-                label="TXID транзакции"
-                value={txId}
-                onChange={(e) => setTxId(e.target.value)}
-                placeholder="ID транзакции из блокчейна"
-                required
-              />
-
-              {error ? (
-                <p className="text-xs text-danger">{error}</p>
-              ) : null}
-
-              <Button type="submit" loading={loading} className="w-full">
-                Отправить заявку
-              </Button>
-            </form>
-          </Card>
-        </>
+          <p className="text-2xs text-ink-faint mt-2">
+            Отправьте{" "}
+            {selectedCurrency === "USDT" ? "USDT TRC-20" : "BTC"}{" "}
+            на этот адрес и заполните форму ниже
+          </p>
+        </Card>
+      ) : (
+        <Card padding="md">
+          <p className="text-sm text-ink-muted text-center">
+            Адрес для {selectedCurrency} временно недоступен
+          </p>
+        </Card>
       )}
+
+      <Card padding="lg">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            label="Сумма (USD)"
+            type="number"
+            step="0.01"
+            min="10"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Минимум $10"
+            required
+          />
+          <Input
+            label="TXID транзакции"
+            value={txId}
+            onChange={(e) => setTxId(e.target.value)}
+            placeholder="ID транзакции из блокчейна"
+            required
+          />
+          {error ? <p className="text-xs text-danger">{error}</p> : null}
+          <Button type="submit" loading={loading} className="w-full">
+            Отправить заявку
+          </Button>
+        </form>
+      </Card>
     </div>
   );
 }
