@@ -1,0 +1,49 @@
+# ==========================================================
+# CITADEL — автоматическая проверка проекта
+#
+# Запускается при каждом сохранении файла в GitHub.
+# Результат виден рядом с коммитом:
+#   жёлтый кружок  — проверка идёт
+#   зелёная галочка — всё в порядке
+#   красный крестик — есть ошибка
+# ==========================================================
+
+name: Проверка проекта
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Сборка и проверка типов
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Получение файлов проекта
+        uses: actions/checkout@v4
+
+      - name: Установка Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Установка библиотек
+        run: npm install --no-audit --no-fund
+
+      - name: Проверка типов
+        run: npm run typecheck
+
+      - name: Сборка сайта
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_SITE_URL: "
