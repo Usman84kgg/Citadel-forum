@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Cinzel, Inter } from "next/font/google";
 import { SITE } from "@/lib/config/site";
+import { Header } from "@/components/layout/header";
+import { MainNav } from "@/components/layout/main-nav";
 import "@/styles/tokens.css";
 import "./globals.css";
 
@@ -42,7 +44,16 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ru" className={`${cinzel.variable} ${inter.variable} dark`} suppressHydrationWarning>
-      <body className="min-h-dvh bg-base font-ui text-ink antialiased">{children}</body>
+      <body className="min-h-dvh bg-base font-ui text-ink antialiased">
+        <Header />
+        <MainNav />
+        <main>{children}</main>
+        <footer className="border-t border-line-subtle py-6 mt-16">
+          <div className="citadel-container text-center text-2xs text-ink-faint">
+            © {new Date().getFullYear()} {SITE.name}. Все права защищены.
+          </div>
+        </footer>
+      </body>
     </html>
   );
 }
