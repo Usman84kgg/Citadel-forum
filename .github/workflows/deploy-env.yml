@@ -1,0 +1,47 @@
+name: Установка переменных в Vercel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-env:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Установка DATABASE_URL
+        run: |
+          curl -X POST "https://api.vercel.com/v10/projects/${{ secrets.VERCEL_PROJECT_ID }}/env" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "key": "DATABASE_URL",
+              "value": "${{ secrets.VERCEL_DB_URL_6543 }}",
+              "type": "encrypted",
+              "target": ["production", "preview", "development"]
+            }'
+
+      - name: Установка DIRECT_URL
+        run: |
+          curl -X POST "https://api.vercel.com/v10/projects/${{ secrets.VERCEL_PROJECT_ID }}/env" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "key": "DIRECT_URL",
+              "value": "${{ secrets.VERCEL_DB_URL_5432 }}",
+              "type": "encrypted",
+              "target": ["production", "preview", "development"]
+            }'
+
+      - name: Запуск пересборки
+        run: |
+          curl -X POST "https://api.vercel.com/v13/deployments" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "citadel-forum",
+              "gitSource": {
+                "ref": "main"
+              },
+              "target": "production"
+            }'
