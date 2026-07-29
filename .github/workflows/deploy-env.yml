@@ -1,7 +1,9 @@
 name: Установка переменных в Vercel
 
 on:
-  workflow_dispatch:
+  push:
+    paths:
+      - 'trigger-env-setup.txt'
 
 jobs:
   deploy-env:
