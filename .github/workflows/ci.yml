@@ -46,4 +46,21 @@ jobs:
         run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: "1"
-          NEXT_PUBLIC_SITE_URL: "
+          NEXT_PUBLIC_SITE_URL: "https://citadel.local"
+          NEXT_PUBLIC_ADMIN_URL: "https://admin.citadel.local"
+
+  secrets-scan:
+    name: Поиск случайно попавших ключей
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Получение файлов проекта
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Проверка на утечку секретов
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
