@@ -14,7 +14,6 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   trailingSlash: false,
-  eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: false },
   images: {
     formats: ["image/avif", "image/webp"],
