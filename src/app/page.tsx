@@ -1,11 +1,13 @@
-import { ESCROW_RULES } from "@/lib/config/site";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-
 export default function HomePage() {
   return (
-    <div className="space-y-4 pb-8">
+    <div className="space-y-0 pb-8">
+      {/* Реклама */}
+      <div className="citadel-container py-2">
+        <div className="citadel-card bg-surface border border-dashed border-line-strong flex items-center justify-center h-16 text-ink-faint text-xs uppercase tracking-wide">
+          Реклама — настраивается в админ-панели
+        </div>
+      </div>
+
       <WelcomeBlock />
       <div className="citadel-container space-y-4">
         <AnnouncementBar />
