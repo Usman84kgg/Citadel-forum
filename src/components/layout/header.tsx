@@ -9,7 +9,7 @@ export function Header() {
         {/* Логотип */}
         <Link href="/" className="flex items-center gap-3 shrink-0">
           <Image
-            src="/logo/708EF42A-E02E-487F-91D5-F03B44F921D8.png"
+            src="/708EF42A-E02E-487F-91D5-F03B44F921D8.png"
             alt="CITADEL"
             width={40}
             height={40}
