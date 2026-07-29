@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    border-color: var(--citadel-border-subtle);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--citadel-bg-base);
+    color: var(--citadel-text-primary);
+    font-family: var(--font-ui), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100dvh;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display), Georgia, serif;
+    letter-spacing: 0.02em;
+  }
+
+  ::selection {
+    background-color: rgba(212, 175, 55, 0.28);
+    color: var(--citadel-text-primary);
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--citadel-bg-base); }
+  ::-webkit-scrollbar-thumb {
+    background: var(--citadel-bg-surface-3);
+    border-radius: 8px;
+    border: 2px solid var(--citadel-bg-base);
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--citadel-gold-800); }
+
+  :focus-visible {
+    outline: 2px solid var(--citadel-gold-500);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  a, button { -webkit-tap-highlight-color: transparent; }
+}
+
+@layer components {
+  .citadel-card {
+    background-color: var(--citadel-bg-surface);
+    border: 1px solid var(--citadel-border-subtle);
+    border-radius: var(--citadel-radius-card);
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.45);
+  }
+
+  .citadel-gold-text {
+    background-image: linear-gradient(135deg,
+      var(--citadel-gold-200) 0%, var(--citadel-gold-500) 45%,
+      var(--citadel-gold-300) 70%, var(--citadel-gold-600) 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  .citadel-divider {
+    height: 1px;
+    background-image: linear-gradient(90deg,
+      transparent 0%, var(--citadel-border-strong) 50%, transparent 100%);
+  }
+
+  .citadel-container {
+    width: 100%;
+    max-width: var(--citadel-content-max);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
