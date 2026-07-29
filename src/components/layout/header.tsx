@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { SITE } from "@/lib/config/site";
+import logoImg from "/public/708EF42A-E02E-487F-91D5-F03B44F921D8.png";
 
 export function Header() {
   return (
@@ -9,7 +10,7 @@ export function Header() {
         {/* Логотип */}
         <Link href="/" className="flex items-center gap-3 shrink-0">
           <Image
-            src="/708EF42A-E02E-487F-91D5-F03B44F921D8.png"
+            src={logoImg}
             alt="CITADEL"
             width={40}
             height={40}
