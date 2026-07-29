@@ -1,0 +1,8 @@
+{
+  "env": {
+    "DATABASE_URL": "postgresql://postgres:Imamkiss500%29%29@db.lewytkfykerbxgtnyljv.supabase.co:6543/postgres?pgbouncer=true",
+    "DIRECT_URL": "postgresql://postgres:Imamkiss500%29%29@db.lewytkfykerbxgtnyljv.supabase.co:5432/postgres",
+    "AUTH_SECRET": "c1t4d3l-s3cur3-jwt-k3y-2026-pr1v4t3-c0mmun1ty-pl4tf0rm-8a7b9c",
+    "CRON_SECRET": "c1t4d3l-cr0n-s3cr3t-2026-b4ckgr0und-j0bs-3f2d1e"
+  }
+}
