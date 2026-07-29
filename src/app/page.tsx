@@ -6,12 +6,8 @@ import { Button } from "@/components/ui/button";
 export default function HomePage() {
   return (
     <div className="space-y-0 pb-8">
-      {/* Реклама */}
-      <div className="citadel-container py-2">
-        <div className="citadel-card bg-surface border border-dashed border-line-strong flex items-center justify-center h-16 text-ink-faint text-xs uppercase tracking-wide">
-          Реклама — настраивается в админ-панели
-        </div>
-      </div>
+      {/* Живая реклама — загружается из базы */}
+      <AdBanner />
 
       <WelcomeBlock />
       <div className="citadel-container space-y-4">
@@ -31,6 +27,11 @@ export default function HomePage() {
     </div>
   );
 }
+
+// ==========================================================
+// РЕКЛАМНЫЙ БЛОК (живой, загружается из БД)
+// ==========================================================
+import { AdBanner } from "@/components/ads/ad-banner";
 
 // ==========================================================
 function WelcomeBlock() {
@@ -63,7 +64,6 @@ function WelcomeBlock() {
             </div>
           </div>
 
-          {/* Карточка "Стать участником" */}
           <div className="lg:justify-self-end">
             <Card variant="gold" padding="lg" className="text-center w-full max-w-xs">
               <img
