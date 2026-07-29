@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 
 interface PaymentAddress {
   currency: string;
@@ -88,7 +87,6 @@ export default function DepositPage() {
         </Card>
       ) : (
         <>
-          {/* Выбор валюты */}
           <div className="flex gap-2">
             {["USDT", "BTC"].map((cur) => (
               <button
@@ -105,7 +103,6 @@ export default function DepositPage() {
             ))}
           </div>
 
-          {/* Адрес */}
           {activeAddress ? (
             <Card padding="md">
               <p className="text-xs text-ink-muted mb-1">Адрес для пополнения</p>
@@ -133,7 +130,6 @@ export default function DepositPage() {
             </Card>
           )}
 
-          {/* Форма */}
           <Card padding="lg">
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
