@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +11,7 @@ interface WithdrawalItem { id: string; userId: string; currency: string; amount:
 interface AddressItem { currency: string; network: string; address: string; label: string; isActive: boolean; }
 
 export default function AdminPage() {
-  const router = useRouter();
-  const [tab, setTab] = useState<"deposits" | "withdrawals" | "manual" | "addresses">("deposits");
+  const [tab, setTab] = useState<"deposits" | "withdrawals" | "manual" | "addresses" | "badges">("deposits");
   const [deposits, setDeposits] = useState<DepositItem[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalItem[]>([]);
   const [addresses, setAddresses] = useState<AddressItem[]>([]);
@@ -38,13 +36,13 @@ export default function AdminPage() {
     <div className="citadel-container py-6 space-y-6">
       <h1 className="font-display text-2xl font-bold text-gold-400">Админ-панель</h1>
 
-      {/* Вкладки */}
       <div className="flex gap-2 flex-wrap">
         {[
           { key: "deposits", label: "Пополнения" },
           { key: "withdrawals", label: "Выводы" },
           { key: "manual", label: "Ручные операции" },
           { key: "addresses", label: "Адреса" },
+          { key: "badges", label: "Плашки" },
         ].map((t) => (
           <button
             key={t.key}
@@ -62,6 +60,7 @@ export default function AdminPage() {
       {tab === "withdrawals" && <WithdrawalsTab items={withdrawals} onRefresh={() => fetch("/api/admin/withdrawals").then(r => r.json()).then(setWithdrawals)} />}
       {tab === "manual" && <ManualTab />}
       {tab === "addresses" && <AddressesTab items={addresses} onRefresh={() => fetch("/api/admin/addresses").then(r => r.json()).then(setAddresses)} />}
+      {tab === "badges" && <BadgesTab />}
     </div>
   );
 }
@@ -214,15 +213,115 @@ function AddressesTab({ items, onRefresh }: { items: AddressItem[]; onRefresh: (
 
       <Card padding="lg" className="space-y-3">
         <p className="text-sm font-semibold text-ink">Добавить / изменить адрес</p>
-        <div className="flex gap-2">
-          <select value={currency} onChange={(e) => { setCurrency(e.target.value); setNetwork(e.target.value === "USDT" ? "TRC20" : "BTC"); }} className="bg-surface border border-line-subtle rounded-control px-3 py-2 text-sm text-ink">
-            <option value="BTC">BTC</option>
-            <option value="USDT">USDT (TRC20)</option>
-          </select>
-        </div>
+        <select value={currency} onChange={(e) => { setCurrency(e.target.value); setNetwork(e.target.value === "USDT" ? "TRC20" : "BTC"); }} className="bg-surface border border-line-subtle rounded-control px-3 py-2 text-sm text-ink">
+          <option value="BTC">BTC</option>
+          <option value="USDT">USDT (TRC20)</option>
+        </select>
         <Input label="Адрес" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="bc1q... или TX..." />
         <Input label="Метка" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Основной BTC" />
         <Button size="sm" onClick={save}>Сохранить</Button>
+      </Card>
+    </div>
+  );
+}
+
+// ==========================================================
+function BadgesTab() {
+  const [badges, setBadges] = useState<any[]>([]);
+  const [userBadges, setUserBadges] = useState<any[]>([]);
+  const [label, setLabel] = useState("");
+  const [badgeId, setBadgeId] = useState("");
+  const [variant, setVariant] = useState("gold");
+  const [effect, setEffect] = useState("solid");
+  const [assignUserId, setAssignUserId] = useState("");
+  const [assignBadgeId, setAssignBadgeId] = useState("");
+
+  useEffect(() => {
+    fetch("/api/admin/badges").then(r => r.json()).then(d => {
+      setBadges(d.badges || []);
+      setUserBadges(d.userBadges || []);
+    });
+  }, []);
+
+  async function createBadge() {
+    await fetch("/api/admin/badges", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "create", id: badgeId, label, variant, effect }),
+    });
+    setLabel(""); setBadgeId(""); setVariant("gold"); setEffect("solid");
+    refresh();
+  }
+
+  async function assignBadge() {
+    await fetch("/api/admin/badges", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "assign", userId: assignUserId, badgeId: assignBadgeId }),
+    });
+    setAssignUserId(""); setAssignBadgeId("");
+    refresh();
+  }
+
+  async function removeBadge(userId: string, badgeId: string) {
+    await fetch("/api/admin/badges", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "remove", userId, badgeId }),
+    });
+    refresh();
+  }
+
+  async function deleteBadge(badgeId: string) {
+    await fetch("/api/admin/badges", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete", badgeId }),
+    });
+    refresh();
+  }
+
+  function refresh() {
+    fetch("/api/admin/badges").then(r => r.json()).then(d => {
+      setBadges(d.badges || []);
+      setUserBadges(d.userBadges || []);
+    });
+  }
+
+  return (
+    <div className="space-y-6 max-w-lg">
+      <Card padding="lg" className="space-y-3">
+        <p className="text-sm font-semibold text-ink">Создать новую плашку</p>
+        <Input label="ID (латиница)" value={badgeId} onChange={(e) => setBadgeId(e.target.value)} placeholder="vip, verified, custom..." />
+        <Input label="Текст" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="VIP" />
+        <div className="flex gap-2">
+          <select value={variant} onChange={(e) => setVariant(e.target.value)} className="bg-surface border border-line-subtle rounded-control px-3 py-2 text-sm text-ink">
+            <option value="gold">Золотой</option><option value="success">Зелёный</option><option value="warning">Жёлтый</option>
+            <option value="danger">Красный</option><option value="info">Синий</option><option value="muted">Серый</option>
+          </select>
+          <select value={effect} onChange={(e) => setEffect(e.target.value)} className="bg-surface border border-line-subtle rounded-control px-3 py-2 text-sm text-ink">
+            <option value="solid">Обычный</option><option value="neon">Неон</option>
+            <option value="fire">Огонь</option><option value="outline">Рамка</option>
+          </select>
+        </div>
+        <Button size="sm" onClick={createBadge}>Создать</Button>
+      </Card>
+
+      <Card padding="lg" className="space-y-3">
+        <p className="text-sm font-semibold text-ink">Выдать плашку пользователю</p>
+        <Input label="ID пользователя" value={assignUserId} onChange={(e) => setAssignUserId(e.target.value)} placeholder="user_..." />
+        <select value={assignBadgeId} onChange={(e) => setAssignBadgeId(e.target.value)} className="bg-surface border border-line-subtle rounded-control px-3 py-2 text-sm text-ink w-full">
+          <option value="">Выберите плашку</option>
+          {badges.map((b: any) => <option key={b.id} value={b.id}>{b.label}</option>)}
+        </select>
+        <Button size="sm" onClick={assignBadge}>Выдать</Button>
+      </Card>
+
+      <Card padding="md">
+        <p className="text-sm font-semibold text-ink mb-3">Выданные плашки</p>
+        {userBadges.map((ub: any, i: number) => (
+          <div key={i} className="flex items-center justify-between py-2 border-b border-line-subtle last:border-0">
+            <span className="text-sm text-ink">{ub.userId}</span>
+            <span className="text-xs text-ink-muted">{ub.badgeId}</span>
+            <Button size="sm" variant="danger" onClick={() => removeBadge(ub.userId, ub.badgeId)}>Снять</Button>
+          </div>
+        ))}
       </Card>
     </div>
   );
