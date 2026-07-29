@@ -1,0 +1,229 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+
+interface DepositItem { id: string; userId: string; currency: string; amount: number; method: string; txId?: string; status: string; createdAt: string; }
+interface WithdrawalItem { id: string; userId: string; currency: string; amount: number; method: string; addressTo: string; status: string; createdAt: string; }
+interface AddressItem { currency: string; network: string; address: string; label: string; isActive: boolean; }
+
+export default function AdminPage() {
+  const router = useRouter();
+  const [tab, setTab] = useState<"deposits" | "withdrawals" | "manual" | "addresses">("deposits");
+  const [deposits, setDeposits] = useState<DepositItem[]>([]);
+  const [withdrawals, setWithdrawals] = useState<WithdrawalItem[]>([]);
+  const [addresses, setAddresses] = useState<AddressItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/admin/deposits").then(r => r.ok ? r.json() : []),
+      fetch("/api/admin/withdrawals").then(r => r.ok ? r.json() : []),
+      fetch("/api/admin/addresses").then(r => r.ok ? r.json() : []),
+    ]).then(([d, w, a]) => {
+      setDeposits(Array.isArray(d) ? d : []);
+      setWithdrawals(Array.isArray(w) ? w : []);
+      setAddresses(Array.isArray(a) ? a : []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="citadel-container py-16 text-center text-ink-muted text-sm">Загрузка...</div>;
+
+  return (
+    <div className="citadel-container py-6 space-y-6">
+      <h1 className="font-display text-2xl font-bold text-gold-400">Админ-панель</h1>
+
+      {/* Вкладки */}
+      <div className="flex gap-2 flex-wrap">
+        {[
+          { key: "deposits", label: "Пополнения" },
+          { key: "withdrawals", label: "Выводы" },
+          { key: "manual", label: "Ручные операции" },
+          { key: "addresses", label: "Адреса" },
+        ].map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key as typeof tab)}
+            className={`px-4 py-2 rounded-control text-sm font-medium transition-colors ${
+              tab === t.key ? "bg-gold-500 text-black" : "bg-surface text-ink-muted hover:bg-surface-2"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "deposits" && <DepositsTab items={deposits} onRefresh={() => fetch("/api/admin/deposits").then(r => r.json()).then(setDeposits)} />}
+      {tab === "withdrawals" && <WithdrawalsTab items={withdrawals} onRefresh={() => fetch("/api/admin/withdrawals").then(r => r.json()).then(setWithdrawals)} />}
+      {tab === "manual" && <ManualTab />}
+      {tab === "addresses" && <AddressesTab items={addresses} onRefresh={() => fetch("/api/admin/addresses").then(r => r.json()).then(setAddresses)} />}
+    </div>
+  );
+}
+
+// ==========================================================
+function DepositsTab({ items, onRefresh }: { items: DepositItem[]; onRefresh: () => void }) {
+  async function confirm(id: string) {
+    await fetch("/api/admin/deposits", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action: "confirm" }) });
+    onRefresh();
+  }
+
+  if (items.length === 0) return <Card padding="md"><p className="text-sm text-ink-muted text-center">Нет заявок на пополнение</p></Card>;
+
+  return (
+    <Card padding="none">
+      {items.map((d) => (
+        <div key={d.id} className="flex items-center gap-3 px-4 py-3 border-b border-line-subtle last:border-0">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-ink">{d.userId}</p>
+            <p className="text-2xs text-ink-muted">{d.method} · TXID: {d.txId?.slice(0, 16)}... · {(d.amount / 100).toFixed(2)} USD</p>
+          </div>
+          <Badge variant="warning" size="sm">Ожидает</Badge>
+          <Button size="sm" onClick={() => confirm(d.id)}>Подтвердить</Button>
+        </div>
+      ))}
+    </Card>
+  );
+}
+
+// ==========================================================
+function WithdrawalsTab({ items, onRefresh }: { items: WithdrawalItem[]; onRefresh: () => void }) {
+  const [txIdInputs, setTxIdInputs] = useState<Record<string, string>>({});
+
+  async function approve(id: string) {
+    await fetch("/api/admin/withdrawals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action: "approve" }) });
+    onRefresh();
+  }
+  async function markPaid(id: string) {
+    await fetch("/api/admin/withdrawals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action: "paid", txId: txIdInputs[id] || "" }) });
+    onRefresh();
+  }
+  async function reject(id: string) {
+    await fetch("/api/admin/withdrawals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action: "reject" }) });
+    onRefresh();
+  }
+
+  if (items.length === 0) return <Card padding="md"><p className="text-sm text-ink-muted text-center">Нет заявок на вывод</p></Card>;
+
+  return (
+    <Card padding="none">
+      {items.map((w) => (
+        <div key={w.id} className="px-4 py-3 border-b border-line-subtle last:border-0 space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-ink">{w.userId}</p>
+              <p className="text-2xs text-ink-muted">{w.method} · {w.addressTo.slice(0, 12)}... · {(w.amount / 100).toFixed(2)} USD</p>
+            </div>
+            <Badge variant={w.status === "approved" ? "info" : "warning"} size="sm">
+              {w.status === "approved" ? "Одобрено" : "Ожидает"}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-2">
+            {w.status === "pending" && <Button size="sm" onClick={() => approve(w.id)}>Одобрить</Button>}
+            {w.status === "approved" && (
+              <>
+                <Input placeholder="TXID выплаты" value={txIdInputs[w.id] || ""} onChange={(e) => setTxIdInputs((prev) => ({ ...prev, [w.id]: e.target.value }))} className="h-8 text-xs" />
+                <Button size="sm" onClick={() => markPaid(w.id)}>Выплачено</Button>
+              </>
+            )}
+            <Button variant="danger" size="sm" onClick={() => reject(w.id)}>Отклонить</Button>
+          </div>
+        </div>
+      ))}
+    </Card>
+  );
+}
+
+// ==========================================================
+function ManualTab() {
+  const [userId, setUserId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [result, setResult] = useState("");
+
+  async function doAction(action: string) {
+    const res = await fetch("/api/admin/manual", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, amount: Math.round(parseFloat(amount) * 100), action, note }),
+    });
+    const data = await res.json();
+    setResult(data.success ? "Готово" : data.error || "Ошибка");
+  }
+
+  return (
+    <Card padding="lg" className="max-w-md space-y-4">
+      <Input label="ID пользователя" value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="user_..." />
+      <Input label="Сумма (USD)" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
+      <Input label="Примечание" value={note} onChange={(e) => setNote(e.target.value)} />
+      <div className="flex gap-2 flex-wrap">
+        <Button size="sm" onClick={() => doAction("credit")}>Зачислить</Button>
+        <Button size="sm" variant="danger" onClick={() => doAction("debit")}>Списать</Button>
+        <Button size="sm" variant="secondary" onClick={() => doAction("freeze")}>Заморозить</Button>
+        <Button size="sm" variant="secondary" onClick={() => doAction("unfreeze")}>Разморозить</Button>
+      </div>
+      {result ? <p className="text-sm text-gold-300">{result}</p> : null}
+    </Card>
+  );
+}
+
+// ==========================================================
+function AddressesTab({ items, onRefresh }: { items: AddressItem[]; onRefresh: () => void }) {
+  const [currency, setCurrency] = useState("BTC");
+  const [network, setNetwork] = useState("BTC");
+  const [address, setAddress] = useState("");
+  const [label, setLabel] = useState("");
+
+  async function save() {
+    await fetch("/api/admin/addresses", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currency, network, address, label }),
+    });
+    onRefresh();
+    setAddress(""); setLabel("");
+  }
+
+  async function toggle(currency: string, network: string, isActive: boolean) {
+    await fetch("/api/admin/addresses", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currency, network, isActive: !isActive }),
+    });
+    onRefresh();
+  }
+
+  return (
+    <div className="space-y-4 max-w-md">
+      {items.map((a) => (
+        <Card key={`${a.currency}-${a.network}`} padding="md" className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-ink">{a.label} ({a.currency} {a.network})</p>
+            <p className="text-xs text-ink-muted break-all">{a.address}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant={a.isActive ? "success" : "muted"} size="sm">{a.isActive ? "Активен" : "Отключён"}</Badge>
+            <Button size="sm" variant="ghost" onClick={() => toggle(a.currency, a.network, a.isActive)}>
+              {a.isActive ? "Откл." : "Вкл."}
+            </Button>
+          </div>
+        </Card>
+      ))}
+
+      <Card padding="lg" className="space-y-3">
+        <p className="text-sm font-semibold text-ink">Добавить / изменить адрес</p>
+        <div className="flex gap-2">
+          <select value={currency} onChange={(e) => { setCurrency(e.target.value); setNetwork(e.target.value === "USDT" ? "TRC20" : "BTC"); }} className="bg-surface border border-line-subtle rounded-control px-3 py-2 text-sm text-ink">
+            <option value="BTC">BTC</option>
+            <option value="USDT">USDT (TRC20)</option>
+          </select>
+        </div>
+        <Input label="Адрес" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="bc1q... или TX..." />
+        <Input label="Метка" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Основной BTC" />
+        <Button size="sm" onClick={save}>Сохранить</Button>
+      </Card>
+    </div>
+  );
+}
