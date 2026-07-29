@@ -53,8 +53,7 @@ export default function HomePage() {
 
 function WelcomeBlock() {
   return (
-    <Card variant="gold" padding="lg" className="relative overflow-hidden">
-      {/* Фоновое изображение замка (заглушка) */}
+    <div className="citadel-card bg-surface border border-line-gold shadow-gold relative overflow-hidden p-7">
       <div className="absolute right-0 top-0 h-full w-1/2 bg-gradient-to-l from-gold-500/5 to-transparent pointer-events-none" />
 
       <div className="relative grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
@@ -69,7 +68,9 @@ function WelcomeBlock() {
             Приватное сообщество для общения, безопасных сделок и размещения
             услуг в одном месте.
           </p>
-          <Button size="lg">Стать участником</Button>
+          <div className="inline-block rounded-control border border-line-gold bg-gold-500/10 px-6 py-3 text-sm font-medium text-gold-300">
+            Стать участником
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <StatBox value="2 458" label="Пользователей" />
@@ -78,7 +79,7 @@ function WelcomeBlock() {
           <StatBox value="127" label="Онлайн" />
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
