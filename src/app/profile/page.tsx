@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { BadgeEffect, BadgeVariant } from "@/components/ui/badge";
 
 type UserData = { id: string; email: string; username: string };
@@ -14,6 +16,13 @@ export default function ProfilePage() {
   const [user, setUser] = useState<UserData | null>(null);
   const [badges, setBadges] = useState<UserBadge[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Смена ника
+  const [showNicknameForm, setShowNicknameForm] = useState(false);
+  const [newNick, setNewNick] = useState("");
+  const [nickError, setNickError] = useState("");
+  const [nickSuccess, setNickSuccess] = useState("");
+  const [nickLoading, setNickLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -27,6 +36,32 @@ export default function ProfilePage() {
       .catch(() => router.push("/login"))
       .finally(() => setLoading(false));
   }, [router]);
+
+  async function changeNickname(e: React.FormEvent) {
+    e.preventDefault();
+    setNickError("");
+    setNickSuccess("");
+    setNickLoading(true);
+
+    const res = await fetch("/api/user/change-username", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newUsername: newNick }),
+    });
+
+    const data = await res.json();
+    setNickLoading(false);
+
+    if (!res.ok) {
+      setNickError(data.error || "Ошибка");
+      return;
+    }
+
+    setNickSuccess(`Ник изменён на ${data.username}!`);
+    setNewNick("");
+    setShowNicknameForm(false);
+    setUser((prev) => (prev ? { ...prev, username: data.username } : prev));
+  }
 
   if (loading) return <div className="citadel-container py-16 text-center text-ink-muted text-sm">Загрузка...</div>;
   if (!user) return null;
@@ -56,7 +91,43 @@ export default function ProfilePage() {
             ))}
           </div>
         </div>
+        <div className="ml-auto flex flex-col items-end gap-1">
+          <Button variant="ghost" size="sm" onClick={() => router.push("/login")}>
+            Выйти
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setShowNicknameForm(!showNicknameForm)}>
+            Сменить ник ($100)
+          </Button>
+        </div>
       </div>
+
+      {/* Форма смены ника */}
+      {showNicknameForm && (
+        <Card padding="md" className="mb-6 max-w-md">
+          <form onSubmit={changeNickname} className="space-y-3">
+            <p className="text-xs text-ink-muted">
+              Стоимость смены ника: <span className="text-gold-400 font-bold">$100</span>
+            </p>
+            <Input
+              label="Новый ник"
+              value={newNick}
+              onChange={(e) => setNewNick(e.target.value)}
+              placeholder="Ваш новый ник"
+              required
+            />
+            {nickError && <p className="text-xs text-danger">{nickError}</p>}
+            {nickSuccess && <p className="text-xs text-success">{nickSuccess}</p>}
+            <div className="flex gap-2">
+              <Button type="submit" size="sm" loading={nickLoading}>
+                Сменить за $100
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowNicknameForm(false)}>
+                Отмена
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
