@@ -1,0 +1,948 @@
+// ==========================================================
+// CITADEL — Database Schema
+// ==========================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==========================================================
+// 1. IDENTITY & ACCESS
+// ==========================================================
+
+model User {
+  id                String    @id @default(cuid())
+  username          String    @unique
+  email             String    @unique
+  emailVerified     Boolean   @default(false)
+  emailVerifiedAt   DateTime?
+  passwordHash      String
+  displayName       String?
+  avatarUrl         String?
+  coverUrl          String?
+  bio               String?
+  website           String?
+  timezone          String    @default("UTC")
+  locale            String    @default("ru")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  lastActiveAt      DateTime?
+  forceLogoutAt     DateTime?
+  restrictedUntil   DateTime?
+
+  security          UserSecurity?
+  sessions          Session[]
+  roles             UserRole[]
+  accounts          Account[]
+  threads           Thread[]
+  posts             Post[]
+  listings          Listing[]
+  dealsAsBuyer      Deal[]              @relation("Buyer")
+  dealsAsSeller     Deal[]              @relation("Seller")
+  reviews           Review[]
+  reputation        UserReputation?
+  conversations     ConversationParticipant[]
+  messages          Message[]
+  notifications     Notification[]
+  tickets           Ticket[]
+  reports           Report[]
+  moderationActions ModerationAction[]
+  auditLogs         AuditLog[]
+}
+
+model UserSecurity {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id])
+
+  totpSecret      String?   // encrypted
+  totpEnabled     Boolean   @default(false)
+  backupCodes     String?   // encrypted JSON
+  walletPin       String?   // hashed
+  pgpPublicKey    String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Session {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+
+  refreshTokenHash String
+  deviceName      String?
+  deviceType      String?
+  ipAddress       String?
+  userAgent       String?
+  location        String?
+  lastUsedAt      DateTime  @default(now())
+  expiresAt       DateTime
+  revokedAt       DateTime?
+
+  createdAt       DateTime  @default(now())
+}
+
+model Role {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  level           Int
+  isStaff         Boolean   @default(false)
+  isDefault       Boolean   @default(false)
+
+  users           UserRole[]
+  permissions     RolePermission[]
+}
+
+model Permission {
+  id              String    @id @default(cuid())
+  key             String    @unique
+  group           String
+  description     String?
+
+  roles           RolePermission[]
+}
+
+model RolePermission {
+  roleId          String
+  role            Role      @relation(fields: [roleId], references: [id])
+  permissionId    String
+  permission      Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+}
+
+model UserRole {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  roleId          String
+  role            Role      @relation(fields: [roleId], references: [id])
+  grantedBy       String?
+  grantedAt       DateTime  @default(now())
+  expiresAt       DateTime?
+  isActive        Boolean   @default(true)
+}
+
+model Invite {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  createdBy       String
+  usedBy          String?
+  maxUses         Int       @default(1)
+  useCount        Int       @default(0)
+  expiresAt       DateTime?
+  createdAt       DateTime  @default(now())
+}
+
+model Ban {
+  id              String    @id @default(cuid())
+  userId          String
+  reason          String
+  scope           String    // full, forum, market, escrow, messaging
+  bannedBy        String
+  startsAt        DateTime  @default(now())
+  endsAt          DateTime?
+  isActive        Boolean   @default(true)
+  revokedBy       String?
+  revokedAt       DateTime?
+
+  createdAt       DateTime  @default(now())
+}
+
+model LoginAttempt {
+  id              String    @id @default(cuid())
+  email           String
+  ipAddress       String?
+  success         Boolean
+  userAgent       String?
+  createdAt       DateTime  @default(now())
+}// ==========================================================
+// 2. FORUM
+// ==========================================================
+
+model ForumCategory {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  icon        String?
+  color       String?
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+
+  forums      Forum[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Forum {
+  id              String    @id @default(cuid())
+  categoryId      String
+  category        ForumCategory @relation(fields: [categoryId], references: [id])
+  name            String
+  slug            String    @unique
+  description     String?
+  icon            String?
+  type            String    @default("discussion") // discussion, marketplace, announcements
+  sortOrder       Int       @default(0)
+  isActive        Boolean   @default(true)
+  isVip           Boolean   @default(false)
+  threadCount     Int       @default(0)
+  postCount       Int       @default(0)
+  lastPostId      String?
+
+  permissions     ForumPermission[]
+  threads         Thread[]
+  subscriptions   ForumSubscription[]
+  readMarkers     ForumReadMarker[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model ForumPermission {
+  id              String    @id @default(cuid())
+  forumId         String
+  forum           Forum     @relation(fields: [forumId], references: [id])
+  roleId          String?
+  minimumRoleLevel Int?
+  canView         Boolean   @default(true)
+  canCreateThread Boolean   @default(false)
+  canReply        Boolean   @default(false)
+}
+
+model Thread {
+  id              String    @id @default(cuid())
+  forumId         String
+  forum           Forum     @relation(fields: [forumId], references: [id])
+  authorId        String
+  author          User      @relation(fields: [authorId], references: [id])
+  title           String
+  slug            String
+  content         String
+  type            String    @default("discussion") // discussion, poll, listing, deal, question
+  isPinned        Boolean   @default(false)
+  isLocked        Boolean   @default(false)
+  isHidden        Boolean   @default(false)
+  viewCount       Int       @default(0)
+  postCount       Int       @default(0)
+  lastPostId      String?
+  lastPostAt      DateTime?
+  prefixId        String?
+
+  prefix          ThreadPrefix? @relation(fields: [prefixId], references: [id])
+  posts           Post[]
+  tags            ThreadTag[]
+  poll            Poll?
+  subscriptions   ThreadSubscription[]
+  readTrackers    ThreadRead[]
+  reports         Report[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([forumId, isPinned, lastPostAt])
+  @@index([authorId])
+}
+
+model ThreadPrefix {
+  id              String    @id @default(cuid())
+  name            String
+  color           String?
+  icon            String?
+
+  threads         Thread[]
+}
+
+model Tag {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  slug            String    @unique
+  color           String?
+
+  threads         ThreadTag[]
+}
+
+model ThreadTag {
+  threadId        String
+  thread          Thread    @relation(fields: [threadId], references: [id])
+  tagId           String
+  tag             Tag       @relation(fields: [tagId], references: [id])
+
+  @@id([threadId, tagId])
+}
+
+model Post {
+  id              String    @id @default(cuid())
+  threadId        String
+  thread          Thread    @relation(fields: [threadId], references: [id])
+  authorId        String
+  author          User      @relation(fields: [authorId], references: [id])
+  parentPostId    String?
+  parentPost      Post?     @relation("PostReplies", fields: [parentPostId], references: [id])
+  replies         Post[]    @relation("PostReplies")
+  content         String
+  isHidden        Boolean   @default(false)
+  isEdited        Boolean   @default(false)
+  editCount       Int       @default(0)
+  reactionCount   Int       @default(0)
+
+  revisions       PostRevision[]
+  reactions       Reaction[]
+  reports         Report[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([threadId, createdAt])
+  @@index([authorId])
+}
+
+model PostRevision {
+  id              String    @id @default(cuid())
+  postId          String
+  post            Post      @relation(fields: [postId], references: [id])
+  content         String
+  editedAt        DateTime  @default(now())
+  editReason      String?
+}
+
+model Reaction {
+  id              String    @id @default(cuid())
+  postId          String
+  post            Post      @relation(fields: [postId], references: [id])
+  userId          String
+  type            String    // like, thanks, love, laugh, sad, angry
+  createdAt       DateTime  @default(now())
+
+  @@unique([postId, userId])
+}
+
+model Poll {
+  id              String    @id @default(cuid())
+  threadId        String    @unique
+  thread          Thread    @relation(fields: [threadId], references: [id])
+  question        String
+  maxChoices      Int       @default(1)
+  closesAt        DateTime?
+
+  options         PollOption[]
+}
+
+model PollOption {
+  id              String    @id @default(cuid())
+  pollId          String
+  poll            Poll      @relation(fields: [pollId], references: [id])
+  text            String
+  sortOrder       Int       @default(0)
+  voteCount       Int       @default(0)
+
+  votes           PollVote[]
+}
+
+model PollVote {
+  id              String    @id @default(cuid())
+  optionId        String
+  option          PollOption @relation(fields: [optionId], references: [id])
+  userId          String
+  createdAt       DateTime  @default(now())
+
+  @@unique([optionId, userId])
+}
+
+model ThreadSubscription {
+  id              String    @id @default(cuid())
+  threadId        String
+  thread          Thread    @relation(fields: [threadId], references: [id])
+  userId          String
+  notifyEmail     Boolean   @default(false)
+  notifyInApp     Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+
+  @@unique([threadId, userId])
+}
+
+model ForumSubscription {
+  id              String    @id @default(cuid())
+  forumId         String
+  forum           Forum     @relation(fields: [forumId], references: [id])
+  userId          String
+  createdAt       DateTime  @default(now())
+
+  @@unique([forumId, userId])
+}
+
+model ThreadRead {
+  id              String    @id @default(cuid())
+  threadId        String
+  thread          Thread    @relation(fields: [threadId], references: [id])
+  userId          String
+  lastReadPostId  String?
+  readAt          DateTime  @default(now())
+
+  @@unique([threadId, userId])
+}
+
+model ForumReadMarker {
+  id              String    @id @default(cuid())
+  forumId         String
+  forum           Forum     @relation(fields: [forumId], references: [id])
+  userId          String
+  readAt          DateTime  @default(now())
+
+  @@unique([forumId, userId])
+}
+
+// ==========================================================
+// 3. MARKETPLACE
+// ==========================================================
+
+model ListingCategory {
+  id              String    @id @default(cuid())
+  name            String
+  slug            String    @unique
+  description     String?
+  icon            String?
+  sortOrder       Int       @default(0)
+  isActive        Boolean   @default(true)
+  minReputation   Int       @default(0)
+
+  listings        Listing[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Listing {
+  id              String    @id @default(cuid())
+  categoryId      String
+  category        ListingCategory @relation(fields: [categoryId], references: [id])
+  sellerId        String
+  seller          User      @relation(fields: [sellerId], references: [id])
+  title           String
+  slug            String
+  description     String
+  type            String    @default("service") // service, product, digital, request
+  price           BigInt?
+  currency        String    @default("USD")
+  status          String    @default("pending") // draft, pending, active, hidden, rejected
+  isVerified      Boolean   @default(false)
+  viewCount       Int       @default(0)
+  orderCount      Int       @default(0)
+
+  packages        ListingPackage[]
+  media           ListingMedia[]
+  attributes      Json?
+  reports         Report[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([categoryId, status])
+  @@index([sellerId])
+}
+
+model ListingPackage {
+  id              String    @id @default(cuid())
+  listingId       String
+  listing         Listing   @relation(fields: [listingId], references: [id])
+  name            String
+  description     String?
+  price           BigInt
+  deliveryDays    Int?
+  sortOrder       Int       @default(0)
+}
+
+model ListingMedia {
+  id              String    @id @default(cuid())
+  listingId       String
+  listing         Listing  // ==========================================================
+// 4. WALLET & LEDGER
+// ==========================================================
+
+model Currency {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  name            String
+  symbol          String
+  decimals        Int       @default(2)
+  type            String    @default("fiat") // fiat, crypto
+  isActive        Boolean   @default(true)
+  minDeposit      BigInt?
+  minWithdrawal   BigInt?
+}
+
+model Account {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  currencyId      String
+  currency        Currency  @relation(fields: [currencyId], references: [id])
+  type            String    @default("available") // available, hold, fee_revenue, settlement
+  balance         BigInt    @default(0)
+  version         Int       @default(1) // optimistic locking
+
+  entries         LedgerEntry[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([userId, currencyId, type])
+}
+
+model LedgerTransaction {
+  id              String    @id @default(cuid())
+  type            String    // deposit, withdrawal, transfer, deal_hold, deal_release, deal_refund, fee, adjustment
+  idempotencyKey  String    @unique
+  referenceType
+// ==========================================================
+// 4. WALLET & LEDGER
+// ==========================================================
+
+model Currency {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  name            String
+  symbol          String
+  decimals        Int       @default(2)
+  type            String    @default("fiat") // fiat, crypto
+  isActive        Boolean   @default(true)
+  minDeposit      BigInt?
+  minWithdrawal   BigInt?
+}
+
+model Account {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  currencyId      String
+  currency        Currency  @relation(fields: [currencyId], references: [id])
+  type            String    @default("available") // available, hold, fee_revenue, settlement
+  balance         BigInt    @default(0)
+  version         Int       @default(1)
+
+  entries         LedgerEntry[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([userId, currencyId, type])
+}
+
+model LedgerTransaction {
+  id              String    @id @default(cuid())
+  type            String    // deposit, withdrawal, transfer, deal_hold, deal_release, deal_refund, fee, adjustment
+  idempotencyKey  String    @unique
+  referenceType   String?
+  referenceId     String?
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+
+  entries         LedgerEntry[]
+}
+
+model LedgerEntry {
+  id              String    @id @default(cuid())
+  transactionId   String
+  transaction     LedgerTransaction @relation(fields: [transactionId], references: [id])
+  accountId       String
+  account         Account   @relation(fields: [accountId], references: [id])
+  direction       String    // debit, credit
+  amount          BigInt
+  balanceAfter    BigInt
+  description     String?
+  createdAt       DateTime  @default(now())
+
+  @@index([accountId, createdAt])
+  @@index([transactionId])
+}
+
+model Deposit {
+  id              String    @id @default(cuid())
+  userId          String
+  currencyId      String
+  currency        Currency  @relation(fields: [currencyId], references: [id])
+  amount          BigInt
+  method          String    // btc, usdt_trc20
+  addressFrom     String?
+  txId            String?
+  status          String    @default("pending") // pending, confirmed, rejected
+  adminNote       String?
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  transactionId   String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId, status])
+}
+
+model Withdrawal {
+  id              String    @id @default(cuid())
+  userId          String
+  currencyId      String
+  currency        Currency  @relation(fields: [currencyId], references: [id])
+  amount          BigInt
+  method          String    // btc, usdt_trc20
+  addressTo       String    // encrypted
+  txId            String?
+  status          String    @default("pending") // pending, approved, paid, rejected
+  riskScore       Int       @default(0)
+  adminNote       String?
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  paidBy          String?
+  paidAt          DateTime?
+  transactionId   String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId, status])
+}
+
+model Transfer {
+  id              String    @id @default(cuid())
+  fromUserId      String
+  toUserId        String
+  currencyId      String
+  currency        Currency  @relation(fields: [currencyId], references: [id])
+  amount          BigInt
+  note            String?
+  transactionId   String?
+
+  createdAt       DateTime  @default(now())
+}
+
+model PaymentAddress {
+  id              String    @id @default(cuid())
+  currencyId      String
+  currency        Currency  @relation(fields: [currencyId], references: [id])
+  network         String    // BTC, TRC20
+  address         String    // encrypted
+  label           String?
+  isActive        Boolean   @default(true)
+  dailyLimit      BigInt?
+  createdBy       String
+  updatedBy       String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model FeeRule {
+  id              String    @id @default(cuid())
+  scope           String    // deal, withdrawal, deposit
+  roleLevel       Int?      // null = default for all
+  percent         Decimal   @default(2.00)
+  fixedAmount     BigInt?
+  minAmount       BigInt?
+  isActive        Boolean   @default(true)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model IdempotencyKey {
+  id              String    @id @default(cuid())
+  key             String    @unique
+  responseData    Json?
+  expiresAt       DateTime
+  createdAt       DateTime  @default(now())
+}
+
+// ==========================================================
+// 5. ESCROW
+// ==========================================================
+
+model Deal {
+  id              String    @id @default(cuid())
+  code            String    @unique // CTD-XXXXXXX
+  buyerId         String
+  buyer           User      @relation("Buyer", fields: [buyerId], references: [id])
+  sellerId        String
+  seller          User      @relation("Seller", fields: [sellerId], references: [id])
+  arbiterId       String?
+  title           String
+  description     String
+  amount          BigInt
+  currencyId      String
+  currency        Currency  @relation(fields: [currencyId], references: [id])
+  feePercent      Decimal   @default(2.00)
+  feeAmount       BigInt    @default(0)
+  feePayer        String    @default("seller") // seller, buyer, split
+  status          String    @default("draft")
+  // draft → pending_accept → awaiting_funding → funded →
+  // in_progress → delivered → completed |
+  // disputed → arbitration → resolved_seller | resolved_buyer | resolved_split
+  deliveryDeadline DateTime?
+  autoReleaseAt   DateTime?
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  cancelledBy     String?
+  cancelReason    String?
+  holdTransactionId String?
+  releaseTransactionId String?
+
+  milestones      DealMilestone[]
+  events          DealEvent[]
+  dispute         Dispute?
+  review          Review?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([buyerId, status])
+  @@index([sellerId, status])
+  @@index([status])
+}
+
+model DealMilestone {
+  id              String    @id @default(cuid())
+  dealId          String
+  deal            Deal      @relation(fields: [dealId], references: [id])
+  title           String
+  description     String?
+  amount          BigInt
+  sortOrder       Int       @default(0)
+  status          String    @default("pending") // pending, released
+  releasedAt      DateTime?
+
+  createdAt       DateTime  @default(now())
+}
+
+model DealEvent {
+  id              String    @id @default(cuid())
+  dealId          String
+  deal            Deal      @relation(fields: [dealId], references: [id])
+  actorId         String
+  fromStatus      String?
+  toStatus        String
+  note            String?
+  ipAddress       String?
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+
+  @@index([dealId, createdAt])
+}
+
+model DealMessage {
+  id              String    @id @default(cuid())
+  dealId          String
+  senderId        String
+  content         String
+  isSystemMessage Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+
+  @@index([dealId, createdAt])
+}
+
+// ==========================================================
+// 6. ARBITRATION
+// ==========================================================
+
+model Dispute {
+  id              String    @id @default(cuid())
+  dealId          String    @unique
+  deal            Deal      @relation(fields: [dealId], references: [id])
+  openedBy        String
+  reason          String
+  description     String?
+  status          String    @default("open") // open, gathering_evidence, assigned, in_review, resolved, appealed, closed
+  priority        String    @default("normal")
+  arbiterId       String?
+  slaDueAt        DateTime?
+  resolvedAt      DateTime?
+
+  evidence        DisputeEvidence[]
+  messages        DisputeMessage[]
+  decision        DisputeDecision?
+  appeal          DisputeAppeal?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model DisputeEvidence {
+  id              String    @id @default(cuid())
+  disputeId       String
+  dispute         Dispute   @relation(fields: [disputeId], references: [id])
+  uploadedBy      String
+  type            String    // file, link, text
+  content         String?
+  mediaId         String?
+  media           Media?    @relation(fields: [mediaId], references: [id])
+  checksum        String?
+  createdAt       DateTime  @default(now())
+}
+
+model DisputeMessage {
+  id              String    @id @default(cuid())
+  disputeId       String
+  dispute         Dispute   @relation(fields: [disputeId], references: [id])
+  senderId        String
+  channel         String    @default("all") // buyer, seller, staff, all
+  content         String
+  createdAt       DateTime  @default(now())
+}
+
+model DisputeDecision {
+  id              String    @id @default(cuid())
+  disputeId       String    @unique
+  dispute         Dispute   @relation(fields: [disputeId], references: [id])
+  arbiterId       String
+  type            String    // resolve_seller, resolve_buyer, split
+  sellerAmount    BigInt?
+  buyerAmount     BigInt?
+  reasoning       String
+  executedAt      DateTime?
+  createdAt       DateTime  @default(now())
+}
+
+model DisputeAppeal {
+  id              String    @id @default(cuid())
+  disputeId       String    @unique
+  dispute         Dispute   @relation(fields: [disputeId], references: [id])
+  appealedBy      String
+  reason          String
+  status          String    @default("pending") // pending, accepted, rejected
+  reviewedBy      String?
+  decision        String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}// ==========================================================
+// 7. REPUTATION
+// ==========================================================
+
+model Review {
+  id              String    @id @default(cuid())
+  dealId          String    @unique
+  deal            Deal      @relation(fields: [dealId], references: [id])
+  reviewerId      String
+  targetId        String
+  rating          Int       // 1-5
+  qualityRating   Int?
+  speedRating     Int?
+  communicationRating Int?
+  comment         String?
+  response        String?
+  respondedAt     DateTime?
+  isEdited        Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([targetId])
+}
+
+model ReputationEvent {
+  id              String    @id @default(cuid())
+  userId          String
+  source          String    // deal_completed, review_received, review_given, post_thanked, admin_adjustment, dispute_lost, warning
+  delta           Int
+  weight          Int       @default(1)
+  referenceType   String?
+  referenceId     String?
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model UserReputation {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id])
+  score           Int       @default(0)
+  positiveCount   Int       @default(0)
+  negativeCount   Int       @default(0)
+  dealCount       Int       @default(0)
+  dealVolume      BigInt    @default(0)
+  trustLevel      String    @default("new") // new, trusted, reliable, elite
+  rank            Int?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Badge {
+  id              String    @id @default(cuid())
+  key             String    @unique
+  name            String
+  description     String?
+  icon            String?
+  color           String?
+  category        String    @default("achievement")
+
+  users           UserBadge[]
+}
+
+model UserBadge {
+  id              String    @id @default(cuid())
+  userId          String
+  badgeId         String
+  badge           Badge     @relation(fields: [badgeId], references: [id])
+  awardedBy       String?
+  awardedAt       DateTime  @default(now())
+  metadata        Json?
+
+  @@unique([userId, badgeId])
+}
+
+// ==========================================================
+// 8. MESSAGING
+// ==========================================================
+
+model Conversation {
+  id              String    @id @default(cuid())
+  type            String    @default("direct") // direct, group, deal, support
+  title           String?
+  dealId          String?
+  lastMessageAt   DateTime?
+  createdAt       DateTime  @default(now())
+
+  participants    ConversationParticipant[]
+  messages        Message[]
+}
+
+model ConversationParticipant {
+  id              String    @id @default(cuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id])
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  lastReadAt      DateTime?
+  isMuted         Boolean   @default(false)
+  isArchived      Boolean   @default(false)
+  joinedAt        DateTime  @default(now())
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id              String    @id @default(cuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id])
+  senderId        String
+  sender          User      @relation(fields: [senderId], references: [id])
+  content         String?
+  attachmentId    String?
+  attachment      Media?    @relation(fields: [attachmentId], references: [id])
+  isSystemMessage Boolean   @default(false)
+  isDeleted       Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+model UserBlock {
+  id              String    @id @default(cuid())
+  userId          String
+  blockedUserId   String
+ 
