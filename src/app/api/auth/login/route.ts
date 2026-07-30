@@ -1,40 +1,67 @@
 import { NextResponse } from "next/server";
 import { createAccessToken, createRefreshToken } from "@/lib/auth/jwt";
-
-// ==========================================================
-// ВРЕМЕННО: email владельца (замени на свой)
-// Позже перенесём в переменную окружения Vercel
-// ==========================================================
-const OWNER_EMAIL = "citadelforum77@gmail.com";
+import { verifyPassword } from "@/lib/auth/password";
+import { supabase } from "@/lib/db/supabase";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email } = body;
+    const { email, password } = body;
 
-    if (!email) {
-      return NextResponse.json({ error: "Email обязателен" }, { status: 400 });
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: "Email и пароль обязательны" },
+        { status: 400 },
+      );
     }
 
-    // ВРЕМЕННАЯ ЗАГЛУШКА — позже заменим на проверку пароля через БД
-    const isOwner = email === OWNER_EMAIL;
-    const role = isOwner ? "owner" : "member";
+    // Ищем пользователя в базе данных
+    const { data: user, error: dbError } = await supabase
+      .from("users")
+      .select("id, email, username, password_hash")
+      .eq("email", email)
+      .single();
+
+    if (dbError || !user) {
+      return NextResponse.json(
+        { error: "Неверный email или пароль" },
+        { status: 401 },
+      );
+    }
+
+    // Проверяем пароль
+    const isValid = await verifyPassword(password, user.password_hash);
+    if (!isValid) {
+      return NextResponse.json(
+        { error: "Неверный email или пароль" },
+        { status: 401 },
+      );
+    }
+
+    // Определяем роль (owner — только для этого email)
+    const role =
+      email === "citadelforum77@gmail.com" ? "owner" : "member";
 
     const accessToken = await createAccessToken({
-      sub: isOwner ? "owner_1" : `user_${Date.now()}`,
-      email,
-      username: email.split("@")[0] ?? "User",
+      sub: user.id,
+      email: user.email,
+      username: user.username,
       role,
     });
 
     const refreshToken = await createRefreshToken({
-      sub: isOwner ? "owner_1" : `user_${Date.now()}`,
+      sub: user.id,
       type: "refresh",
     });
 
     const response = NextResponse.json({
       success: true,
-      user: { email, username: email.split("@")[0], role },
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        role,
+      },
     });
 
     response.cookies.set("access_token", accessToken, {
@@ -55,6 +82,9 @@ export async function POST(request: Request) {
 
     return response;
   } catch {
-    return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Ошибка сервера" },
+      { status: 500 },
+    );
   }
 }
