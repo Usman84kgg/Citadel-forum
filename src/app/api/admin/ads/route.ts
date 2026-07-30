@@ -6,32 +6,20 @@ export async function GET() {
   return NextResponse.json(data || []);
 }
 
-export async function POST(request: Request) {
-  const body = await request.json();
-  const { action, id, title, slot, mediaUrl, mediaType, linkUrl, isActive, priority } = body;
-
-  if (action === "toggle") {
-    const { data: existing } = await supabase.from("ad_campaigns").select("is_active").eq("id", id).single();
-    await supabase.from("ad_campaigns").update({ is_active: !existing?.is_active }).eq("id", id);
+export async function POST(req: Request) {
+  const b = await req.json();
+  if (b.action === "toggle") {
+    const { data: ex } = await supabase.from("ad_campaigns").select("is_active").eq("id", b.id).single();
+    await supabase.from("ad_campaigns").update({ is_active: !ex?.is_active }).eq("id", b.id);
     return NextResponse.json({ success: true });
   }
-
-  if (action === "delete") {
-    await supabase.from("ad_campaigns").delete().eq("id", id);
+  if (b.action === "delete") {
+    await supabase.from("ad_campaigns").delete().eq("id", b.id);
     return NextResponse.json({ success: true });
   }
-
-  if (action === "update" && id) {
-    await supabase.from("ad_campaigns").update({ title, slot, media_url: mediaUrl, media_type: mediaType, link_url: linkUrl, priority }).eq("id", id);
-    return NextResponse.json({ success: true });
-  }
-
-  // create
   const { data } = await supabase.from("ad_campaigns").insert({
-    title, slot, media_url: mediaUrl, media_type: mediaType || "image",
-    link_url: linkUrl, is_active: isActive ?? true, priority: priority || 0,
-    created_by: "admin",
+    title: b.title, slot: b.slot, media_url: b.mediaUrl, media_type: b.mediaType || "image",
+    link_url: b.linkUrl, is_active: true, priority: b.priority || 0, created_by: "admin",
   }).select().single();
-
   return NextResponse.json({ success: true, ad: data });
 }
