@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { walletDB } from "@/lib/wallet/mock-db";
+import { walletDB } from "@/lib/db/wallet";
 
-// Публичный эндпоинт — адреса для пополнения доступны всем авторизованным
 export async function GET() {
-  const addresses = walletDB.getActiveAddresses();
+  const addresses = await walletDB.getAddresses();
   return NextResponse.json(addresses);
 }
