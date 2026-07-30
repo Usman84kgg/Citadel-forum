@@ -4,8 +4,9 @@ import { escrowDB } from "@/lib/db/escrow";
 
 const SECRET = new TextEncoder().encode(process.env.AUTH_SECRET || "citadel-dev-secret-change-in-production");
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const deal = await escrowDB.getDeal(params.id);
+export async function GET(request: Request, props: { params: Promise<{ id: string }> }) {
+  const { id } = await props.params;
+  const deal = await escrowDB.getDeal(id);
   const events = await escrowDB.getDealEvents(params.id);
   const messages = await escrowDB.getDealMessages(params.id);
   return NextResponse.json({ deal, events, messages });
