@@ -31,7 +31,7 @@ export default function DepositPage() {
   }, []);
 
   const activeAddress = addresses.find(
-    (a) => a.currency === selectedCurrency && a.isActive,
+    (a) => a.currency === selectedCurrency && a.isActive
   );
 
   async function handleSubmit(e: React.FormEvent) {
