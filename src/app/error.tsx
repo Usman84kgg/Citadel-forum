@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 export default function Error() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center px-4 text-center">
