@@ -49,13 +49,15 @@ export async function POST(request: Request) {
       user: { id: user.id, email: user.email, username: user.username, role },
     });
 
-    response.cookies.set("access_token", accessToken, {
-      httpOnly: true, secure: true, sameSite: "lax", maxAge: 600, path: "/",
-    });
+    const isHttps = process.env.NODE_ENV === "production" && process.env.NEXT_PUBLIC_SITE_URL?.startsWith("https");
 
-    response.cookies.set("refresh_token", refreshToken, {
-      httpOnly: true, secure: true, sameSite: "lax", maxAge: 604800, path: "/",
-    });
+response.cookies.set("access_token", accessToken, {
+  httpOnly: true, secure: isHttps, sameSite: "lax", maxAge: 600, path: "/",
+});
+
+response.cookies.set("refresh_token", refreshToken, {
+  httpOnly: true, secure: isHttps, sameSite: "lax", maxAge: 604800, path: "/",
+});
 
     return response;
   } catch {
