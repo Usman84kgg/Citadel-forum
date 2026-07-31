@@ -33,7 +33,6 @@ export default function LoginPage() {
         return;
       }
 
-      // Вход успешен — принудительно переходим на главную
       window.location.href = "/";
     } catch {
       setError("Ошибка соединения");
@@ -58,28 +57,15 @@ export default function LoginPage() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="cotadelforum77@gmail.com"
+            placeholder="citadelforum77@gmail.com"
             required
           />
-
-          {error ? (
-            <p className="text-xs text-danger text-center">{error}</p>
-          ) : null}
-
-          <Button type="submit" loading={loading} className="w-full">
-            Войти
-          </Button>
+          {error ? <p className="text-xs text-danger text-center">{error}</p> : null}
+          <Button type="submit" loading={loading} className="w-full">Войти</Button>
         </form>
 
         <p className="text-center text-xs text-ink-muted mt-4">
-          Нет аккаунта?{" "}
-          <Link href="/register" className="text-gold-400 hover:text-gold-300">
-            Зарегистрироваться
-          </Link>
-        </p>
-
-        <p className="text-center text-2xs text-ink-faint mt-2">
-          Владелец: cotadelforum77@gmail.com
+          Нет аккаунта? <Link href="/register" className="text-gold-400 hover:text-gold-300">Зарегистрироваться</Link>
         </p>
       </Card>
     </div>
