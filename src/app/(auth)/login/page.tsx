@@ -11,6 +11,7 @@ import { SITE } from "@/lib/config/site";
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -23,17 +24,19 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, password }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const data = await res.json();
         setError(data.error || "Ошибка входа");
         setLoading(false);
         return;
       }
 
-      window.location.href = "/";
+      router.push("/");
+      router.refresh();
     } catch {
       setError("Ошибка соединения");
       setLoading(false);
@@ -52,14 +55,8 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="citadelforum77@gmail.com"
-            required
-          />
+          <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="citadelforum77@gmail.com" required />
+          <Input label="Пароль" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
           {error ? <p className="text-xs text-danger text-center">{error}</p> : null}
           <Button type="submit" loading={loading} className="w-full">Войти</Button>
         </form>
