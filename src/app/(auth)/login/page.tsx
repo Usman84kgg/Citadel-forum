@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -8,32 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { SITE } from "@/lib/config/site";
 
-// Компонент капчи Cloudflare Turnstile
-function TurnstileWidget() {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-  }, []);
-
-  return (
-    <div
-      ref={ref}
-      className="cf-turnstile"
-      data-sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"}
-      data-theme="dark"
-    />
-  );
-}
-
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -42,25 +19,26 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const form = e.target as HTMLFormElement;
-    const turnstileToken = (form.querySelector("[name=cf-turnstile-response]") as HTMLInputElement)?.value;
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
 
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, turnstileToken }),
-    });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Ошибка входа");
+        setLoading(false);
+        return;
+      }
 
-    const data = await res.json();
-    setLoading(false);
-
-    if (!res.ok) {
-      setError(data.error || "Ошибка входа");
-      return;
+      // Вход успешен — принудительно переходим на главную
+      window.location.href = "/";
+    } catch {
+      setError("Ошибка соединения");
+      setLoading(false);
     }
-
-    router.push("/");
-    router.refresh();
   }
 
   return (
@@ -75,15 +53,33 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required />
-          <Input label="Пароль" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
-          <TurnstileWidget />
-          {error ? <p className="text-xs text-danger text-center">{error}</p> : null}
-          <Button type="submit" loading={loading} className="w-full">Войти</Button>
+          <Input
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="cotadelforum77@gmail.com"
+            required
+          />
+
+          {error ? (
+            <p className="text-xs text-danger text-center">{error}</p>
+          ) : null}
+
+          <Button type="submit" loading={loading} className="w-full">
+            Войти
+          </Button>
         </form>
 
         <p className="text-center text-xs text-ink-muted mt-4">
-          Нет аккаунта? <Link href="/register" className="text-gold-400 hover:text-gold-300">Зарегистрироваться</Link>
+          Нет аккаунта?{" "}
+          <Link href="/register" className="text-gold-400 hover:text-gold-300">
+            Зарегистрироваться
+          </Link>
+        </p>
+
+        <p className="text-center text-2xs text-ink-faint mt-2">
+          Владелец: cotadelforum77@gmail.com
         </p>
       </Card>
     </div>
