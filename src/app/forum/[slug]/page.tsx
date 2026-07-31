@@ -44,8 +44,7 @@ export default function ForumPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ forumSlug: slug, title, content }),
     });
-    const data = await res.json();
-    if (data.success) {
+    if (res.ok) {
       setShowNew(false);
       setTitle("");
       setContent("");
