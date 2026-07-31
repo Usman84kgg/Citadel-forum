@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "description": "CITADEL — Private Community Platform",
-  "engines": { "node": ">=20.0.0" },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "next dev",
-    "build": "npx next build || true"
+    "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit"
   },
