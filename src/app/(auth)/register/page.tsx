@@ -1,30 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { SITE } from "@/lib/config/site";
-
-function TurnstileWidget() {
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-  }, []);
-
-  return (
-    <div
-      className="cf-turnstile"
-      data-sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"}
-      data-theme="dark"
-    />
-  );
-}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -45,13 +27,10 @@ export default function RegisterPage() {
       return;
     }
 
-    const form = e.target as HTMLFormElement;
-    const turnstileToken = (form.querySelector("[name=cf-turnstile-response]") as HTMLInputElement)?.value;
-
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, username, password, turnstileToken }),
+      body: JSON.stringify({ email, username, password }),
     });
 
     const data = await res.json();
@@ -80,7 +59,6 @@ export default function RegisterPage() {
           <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required />
           <Input label="Имя пользователя" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="CryptoKing" required />
           <Input label="Пароль" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Минимум 8 символов" required />
-          <TurnstileWidget />
           {error ? <p className="text-xs text-danger text-center">{error}</p> : null}
           <Button type="submit" loading={loading} className="w-full">Зарегистрироваться</Button>
         </form>
