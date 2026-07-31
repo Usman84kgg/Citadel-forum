@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email обязателен" }, { status: 400 });
     }
 
-    const role = email === "cotadelforum77@gmail.com" ? "owner" : "member";
+    const role = email === "citadelforum77@gmail.com" ? "owner" : "member";
 
     const accessToken = await createAccessToken({
       sub: email,
