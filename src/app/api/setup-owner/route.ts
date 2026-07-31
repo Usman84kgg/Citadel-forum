@@ -3,10 +3,8 @@ import { hashPassword } from "@/lib/auth/password";
 import { supabase } from "@/lib/db/supabase";
 
 export async function GET() {
-  // Удаляем старые записи
   await supabase.from("users").delete().eq("email", "citadelforum77@gmail.com");
 
-  // Создаём владельца с правильным хешем
   const passwordHash = await hashPassword("password");
 
   const { data, error } = await supabase.from("users").insert({
