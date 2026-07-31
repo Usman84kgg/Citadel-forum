@@ -1,3 +1,4 @@
+"use client";
 import { ESCROW_RULES } from "@/lib/config/site";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
