@@ -9,19 +9,16 @@ const SECRET = new TextEncoder().encode(
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/_next") || pathname.includes(".")) {
-    return NextResponse.next();
-  }
+  if (pathname.startsWith("/_next") || pathname.includes(".")) return NextResponse.next();
 
+  // Админка — только для owner/admin
   if (pathname.startsWith("/admin")) {
     const token = request.cookies.get("access_token")?.value;
     if (!token) return NextResponse.redirect(new URL("/login", request.url));
     try {
       const { payload } = await jwtVerify(token, SECRET);
       const role = payload.role as string;
-      if (role !== "owner" && role !== "admin") {
-        return NextResponse.redirect(new URL("/", request.url));
-      }
+      if (role !== "owner" && role !== "admin") return NextResponse.redirect(new URL("/", request.url));
       return NextResponse.next();
     } catch {
       return NextResponse.redirect(new URL("/login", request.url));
@@ -31,6 +28,4 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-export const config = {
-  matcher: ["/((?!_next|logo|.*\\.).*)"],
-};
+export const config = { matcher: ["/((?!_next|logo|.*\\.).*)"] };
