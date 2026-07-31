@@ -9,22 +9,23 @@ const SECRET = new TextEncoder().encode(
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Пропускаем ВСЕ страницы без проверки
-  if (
-    pathname === "/" ||
-    pathname === "/login" ||
-    pathname === "/register" ||
-    pathname.startsWith("/forum") ||
-    pathname.startsWith("/market") ||
-    pathname.startsWith("/wallet") ||
-    pathname.startsWith("/escrow") ||
-    pathname.startsWith("/profile") ||
-    pathname.startsWith("/admin") ||        // ← админка открыта
-    pathname.startsWith("/api") ||
-    pathname.startsWith("/_next") ||
-    pathname.includes(".")
-  ) {
+  if (pathname.startsWith("/_next") || pathname.includes(".")) {
     return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/admin")) {
+    const token = request.cookies.get("access_token")?.value;
+    if (!token) return NextResponse.redirect(new URL("/login", request.url));
+    try {
+      const { payload } = await jwtVerify(token, SECRET);
+      const role = payload.role as string;
+      if (role !== "owner" && role !== "admin") {
+        return NextResponse.redirect(new URL("/", request.url));
+      }
+      return NextResponse.next();
+    } catch {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
   }
 
   return NextResponse.next();
