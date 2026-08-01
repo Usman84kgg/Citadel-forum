@@ -1,4 +1,6 @@
 "use client";
+
+import { useEffect, useState } from "react";
 import { ESCROW_RULES } from "@/lib/config/site";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,8 +33,6 @@ export default function HomePage() {
 // ==========================================================
 // ФОРУМ — динамическая загрузка из Supabase
 // ==========================================================
-import { useEffect, useState } from "react";
-
 function ForumSections() {
   const [forums, setForums] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,7 +78,7 @@ function ForumSections() {
             <Card variant={f.slug === "vip" ? "gold" : "interactive"} padding="sm">
               <div className="flex items-start gap-3">
                 <span className="text-xl">
-                  {f.slug === "vip" ? "🔒" : f.slug === "chat" ? "⚡" : f.slug === "market" ? "🏪" : f.slug === "escrow" ? "🛡️" : f.slug === "vacancies" ? "💼" : f.slug === "resumes" ? "📄" : f.slug === "freebies" ? "🎁" : f.slug === "support" ? "🎧" : f.slug === "resources" ? "📚" : f.slug === "news" ? "📢" : f.slug === "rules" ? "📋" : "💬"}
+                  {f.slug === "vip" ? "🔒" : f.slug === "chat" ? "⚡" : f.slug === "market" ? "🏪" : f.slug === "escrow" ? "🛡️" : f.slug === "vacancies" ? "💼" : f.slug === "resumes" ? "" : f.slug === "freebies" ? "🎁" : f.slug === "support" ? "🎧" : f.slug === "resources" ? "📚" : f.slug === "news" ? "📢" : f.slug === "rules" ? "📋" : "💬"}
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
