@@ -21,13 +21,23 @@ type UserStats = {
   balance: number;
 };
 
+const DEFAULT_STATS: UserStats = {
+  posts: 0,
+  thanks: 0,
+  deals: 0,
+  turnover: 0,
+  reputation: 0,
+  positiveRep: 0,
+  negativeRep: 0,
+  balance: 0,
+};
+
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
   const [badges, setBadges] = useState<UserBadge[]>([]);
-  const [stats, setStats] = useState<UserStats | null>(null);
+  const [stats, setStats] = useState<UserStats>(DEFAULT_STATS);
   const [loading, setLoading] = useState(true);
-
   const [showNicknameForm, setShowNicknameForm] = useState(false);
   const [newNick, setNewNick] = useState("");
   const [nickError, setNickError] = useState("");
@@ -37,23 +47,29 @@ export default function ProfilePage() {
   useEffect(() => {
     async function loadData() {
       try {
-        // 1. Получаем пользователя
         const meRes = await fetch("/api/auth/me");
-        if (!meRes.ok) throw new Error("Not auth");
+        if (!meRes.ok) {
+          router.push("/login");
+          return;
+        }
         const meData = await meRes.json();
         setUser(meData.user);
 
-        // 2. Получаем бейджи
-        const badgesRes = await fetch(`/api/user/badges?userId=${meData.user.id}`);
-        const badgesData = await badgesRes.json();
-        setBadges(Array.isArray(badgesData) ? badgesData : []);
+        try {
+          const badgesRes = await fetch(`/api/user/badges?userId=${meData.user.id}`);
+          if (badgesRes.ok) {
+            const badgesData = await badgesRes.json();
+            setBadges(Array.isArray(badgesData) ? badgesData : []);
+          }
+        } catch {}
 
-        // 3. Получаем реальную статистику
-        const statsRes = await fetch("/api/user/stats");
-        if (statsRes.ok) {
-          const statsData = await statsRes.json();
-          setStats(statsData);
-        }
+        try {
+          const statsRes = await fetch("/api/user/stats");
+          if (statsRes.ok) {
+            const statsData = await statsRes.json();
+            setStats({ ...DEFAULT_STATS, ...statsData });
+          }
+        } catch {}
       } catch {
         router.push("/login");
       } finally {
@@ -68,7 +84,6 @@ export default function ProfilePage() {
     setNickError("");
     setNickSuccess("");
     setNickLoading(true);
-
     const res = await fetch("/api/user/change-username", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -76,7 +91,6 @@ export default function ProfilePage() {
     });
     const data = await res.json();
     setNickLoading(false);
-
     if (!res.ok) {
       setNickError(data.error || "Ошибка");
       return;
@@ -95,18 +109,15 @@ export default function ProfilePage() {
     );
   }
 
-  if (!user || !stats) return null;
+  if (!user) return null;
 
   const formatMoney = (amount: number) => {
-    if (amount > 10000) {
-      return `$${(amount / 100).toFixed(2)}`;
-    }
+    if (amount > 10000) return `$${(amount / 100).toFixed(2)}`;
     return `$${amount.toFixed(2)}`;
   };
 
   return (
     <div className="citadel-container py-6">
-      {/* Шапка профиля */}
       <div className="flex items-center gap-4 mb-6">
         <div className="h-16 w-16 rounded-2xl border-2 border-line-gold bg-surface-2 shadow-gold flex items-center justify-center">
           <span className="font-display text-3xl font-bold text-gold-400">
@@ -114,148 +125,71 @@ export default function ProfilePage() {
           </span>
         </div>
         <div>
-          <h1 className="font-display text-2xl font-bold text-gold-400">
-            {user.username}
-          </h1>
+          <h1 className="font-display text-2xl font-bold text-gold-400">{user.username}</h1>
           <p className="text-sm text-ink-muted">{user.email}</p>
-          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-            {badges.map((b) => (
-              <Badge
-                key={b.id}
-                variant={(b.variant as BadgeVariant) || "gold"}
-                effect={(b.effect as BadgeEffect) || "solid"}
-              >
-                {b.label}
-              </Badge>
-            ))}
-          </div>
-        </div>
-        <div className="ml-auto flex flex-col items-end gap-1">
-          <Button variant="ghost" size="sm" onClick={() => router.push("/login")}>
-            Выйти
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowNicknameForm(!showNicknameForm)}
-          >
-            Сменить ник ($100)
-          </Button>
+          {badges.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {badges.map((b) => (
+                <Badge key={b.id} variant={b.variant as BadgeVariant} effect={b.effect as BadgeEffect} size="sm">
+                  {b.label}
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Форма смены ника */}
-      {showNicknameForm && (
-        <Card padding="md" className="mb-6 max-w-md">
-          <form onSubmit={changeNickname} className="space-y-3">
-            <p className="text-xs text-ink-muted">
-              Стоимость смены ника:{" "}
-              <span className="text-gold-400 font-bold">$100</span>
-            </p>
-            <Input
-              label="Новый ник"
-              value={newNick}
-              onChange={(e) => setNewNick(e.target.value)}
-              placeholder="Ваш новый ник"
-              required
-            />
-            {nickError && <p className="text-xs text-danger">{nickError}</p>}
-            {nickSuccess && (
-              <p className="text-xs text-success">{nickSuccess}</p>
-            )}
-            <div className="flex gap-2">
-              <Button type="submit" size="sm" loading={nickLoading}>
-                Сменить за $100
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowNicknameForm(false)}
-              >
-                Отмена
-              </Button>
-            </div>
-          </form>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <Card padding="sm" className="text-center">
+          <p className="font-display text-xl font-bold text-gold-400">{stats.posts}</p>
+          <p className="text-2xs text-ink-muted uppercase mt-1">Сообщений</p>
         </Card>
-      )}
-
-      {/* Статистика и баланс */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <ProfileStat
-              value={stats.posts.toString()}
-              label="Публикации"
-              icon="📄"
-            />
-            <ProfileStat
-              value={stats.thanks.toString()}
-              label="Спасибо"
-              icon="🙏"
-            />
-            <ProfileStat
-              value={stats.deals.toString()}
-              label="Сделок"
-              icon="️"
-            />
-            <ProfileStat
-              value={formatMoney(stats.turnover)}
-              label="Оборот"
-              icon="💰"
-            />
-          </div>
-          <Card variant="gold" padding="md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-ink-muted uppercase tracking-wide">
-                  Общий баланс
-                </p>
-                <p className="font-display text-2xl font-bold text-gold-400 mt-1">
-                  {formatMoney(stats.balance)}
-                </p>
-              </div>
-              <a
-                href="/wallet"
-                className="text-xs text-gold-400 hover:underline"
-              >
-                Кошелёк →
-              </a>
-            </div>
-          </Card>
-        </div>
-
-        {/* Репутация */}
-        <Card padding="md">
-          <h3 className="font-display text-sm font-bold text-ink mb-3">
-            Репутация
-          </h3>
-          <p className="font-display text-3xl font-bold text-gold-400">
-            {stats.reputation}
+        <Card padding="sm" className="text-center">
+          <p className="font-display text-xl font-bold text-gold-400">{stats.deals}</p>
+          <p className="text-2xs text-ink-muted uppercase mt-1">Сделок</p>
+        </Card>
+        <Card padding="sm" className="text-center">
+          <p className="font-display text-xl font-bold text-gold-400">
+            {stats.reputation >= 0 ? `+${stats.reputation}` : stats.reputation}
           </p>
-          <div className="flex items-center gap-4 mt-2 text-xs text-ink-muted">
-            <span className="text-success">+{stats.positiveRep} позит.</span>
-            <span className="text-danger">-{stats.negativeRep} негат.</span>
-          </div>
+          <p className="text-2xs text-ink-muted uppercase mt-1">Репутация</p>
+        </Card>
+        <Card padding="sm" className="text-center">
+          <p className="font-display text-xl font-bold text-gold-400">{formatMoney(stats.balance)}</p>
+          <p className="text-2xs text-ink-muted uppercase mt-1">Баланс</p>
         </Card>
       </div>
-    </div>
-  );
-}
 
-function ProfileStat({
-  value,
-  label,
-  icon,
-}: {
-  value: string;
-  label: string;
-  icon: string;
-}) {
-  return (
-    <Card padding="sm" className="text-center">
-      <span className="text-lg block mb-1">{icon}</span>
-      <p className="font-display text-lg font-bold text-gold-400">{value}</p>
-      <p className="text-2xs text-ink-muted">{label}</p>
-    </Card>
+      <Card padding="md" className="mb-6">
+        <h2 className="font-display text-sm font-bold text-ink mb-3">Репутация</h2>
+        <div className="flex gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-success">+{stats.positiveRep}</span>
+            <span className="text-2xs text-ink-muted">положительных</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-danger">-{stats.negativeRep}</span>
+            <span className="text-2xs text-ink-muted">отрицательных</span>
+          </div>
+        </div>
+      </Card>
+
+      <Card padding="md">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-display text-sm font-bold text-ink">Настройки</h2>
+          <Button variant="ghost" size="sm" onClick={() => setShowNicknameForm(!showNicknameForm)}>
+            {showNicknameForm ? "Отмена" : "Изменить ник"}
+          </Button>
+        </div>
+        {nickSuccess && <p className="text-xs text-success mb-3">{nickSuccess}</p>}
+        {showNicknameForm && (
+          <form onSubmit={changeNickname} className="flex gap-2">
+            <Input value={newNick} onChange={(e) => setNewNick(e.target.value)} placeholder="Новый никнейм" className="flex-1" />
+            <Button type="submit" loading={nickLoading} size="sm">Сохранить</Button>
+          </form>
+        )}
+        {nickError && <p className="text-xs text-danger mt-2">{nickError}</p>}
+      </Card>
+    </div>
   );
 }
