@@ -28,8 +28,11 @@ export const forumDB = {
       .single();
     
     if (data) {
-      // Увеличиваем счетчик просмотров (если функция есть в базе)
-      await supabase.rpc("increment_view", { thread_id: threadId }).catch(() => {});
+      // Пытаемся увеличить счетчик, игнорируя ошибки, если функции нет в БД
+      const { error } = await supabase.rpc("increment_view", { thread_id: threadId });
+      if (error) {
+        console.warn("Функция increment_view не найдена или ошибка:", error.message);
+      }
     }
     return data;
   },
@@ -65,7 +68,7 @@ export const forumDB = {
         is_pinned: false,
         is_locked: false,
         view_count: 0,
-        post_count: 1, // Первое сообщение - это сам тред
+        post_count: 1,
         last_post_at: now,
         created_at: now,
       })
@@ -101,14 +104,6 @@ export const forumDB = {
     }
 
     // 2. Обновляем статистику темы (счетчик и дата последнего сообщения)
-    await supabase
-      .from("threads")
-      .update({ 
-        post_count: supabase.rpc('increment_post_count', { thread_id: data.threadId }) // Или просто обновим вручную ниже, если rpc нет
-      })
-      .eq("id", data.threadId);
-    
-    // Более надежный способ без RPC:
     const { data: currentThread } = await supabase
       .from("threads")
       .select("post_count")
