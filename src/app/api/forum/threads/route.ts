@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { forumDB } from "@/lib/db/forum";
-import { cookies } from "next/headers"; // <-- Надежный способ читать куки
+import { cookies } from "next/headers";
 
 const SECRET = new TextEncoder().encode(
   process.env.AUTH_SECRET || "citadel-dev-secret-change-in-production"
@@ -16,12 +16,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    // Читаем куки правильно через next/headers
     const cookieStore = cookies();
     const token = cookieStore.get("access_token")?.value;
 
     if (!token) {
-      console.error("Токен не найден. Список доступных кук:", cookieStore.getAll().map(c => c.name));
+      console.error("Токен не найден. Доступные куки:", cookieStore.getAll().map(c => c.name));
       return NextResponse.json({ error: "Не авторизован (токен не найден)" }, { status: 401 });
     }
 
