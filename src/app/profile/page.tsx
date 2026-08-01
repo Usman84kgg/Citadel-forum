@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
@@ -10,14 +9,24 @@ import type { BadgeEffect, BadgeVariant } from "@/components/ui/badge";
 
 type UserData = { id: string; email: string; username: string };
 type UserBadge = { id: string; label: string; variant: string; effect: string };
+type UserStats = {
+  posts: number;
+  thanks: number;
+  deals: number;
+  turnover: number;
+  reputation: number;
+  positiveRep: number;
+  negativeRep: number;
+  balance: number;
+};
 
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
   const [badges, setBadges] = useState<UserBadge[]>([]);
+  const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Смена ника
   const [showNicknameForm, setShowNicknameForm] = useState(false);
   const [newNick, setNewNick] = useState("");
   const [nickError, setNickError] = useState("");
@@ -25,16 +34,30 @@ export default function ProfilePage() {
   const [nickLoading, setNickLoading] = useState(false);
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((data) => {
-        setUser(data.user);
-        return fetch(`/api/user/badges?userId=${data.user.id}`);
-      })
-      .then((r) => r.json())
-      .then((data) => setBadges(Array.isArray(data) ? data : []))
-      .catch(() => router.push("/login"))
-      .finally(() => setLoading(false));
+    async function loadData() {
+      try {
+        const meRes = await fetch("/api/auth/me");
+        if (!meRes.ok) throw new Error("Not auth");
+        const meData = await meRes.json();
+        setUser(meData.user);
+
+        const badgesRes = await fetch(`/api/user/badges?userId=${meData.user.id}`);
+        const badgesData = await badgesRes.json();
+        setBadges(Array.isArray(badgesData) ? badgesData : []);
+
+        // Получаем реальную статистику
+        const statsRes = await fetch("/api/user/stats");
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          setStats(statsData);
+        }
+      } catch {
+        router.push("/login");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
   }, [router]);
 
   async function changeNickname(e: React.FormEvent) {
@@ -48,7 +71,6 @@ export default function ProfilePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ newUsername: newNick }),
     });
-
     const data = await res.json();
     setNickLoading(false);
 
@@ -56,7 +78,6 @@ export default function ProfilePage() {
       setNickError(data.error || "Ошибка");
       return;
     }
-
     setNickSuccess(`Ник изменён на ${data.username}!`);
     setNewNick("");
     setShowNicknameForm(false);
@@ -64,7 +85,16 @@ export default function ProfilePage() {
   }
 
   if (loading) return <div className="citadel-container py-16 text-center text-ink-muted text-sm">Загрузка...</div>;
-  if (!user) return null;
+  if (!user || !stats) return null;
+
+  // Форматируем деньги (делим на 100, если в центах)
+  const formatMoney = (amount: number) => {
+    // Если сумма больше 10000, скорее всего это центы
+    if (amount > 10000) {
+      return `$${(amount / 100).toFixed(2)}`;
+    }
+    return `$${amount.toFixed(2)}`;
+  };
 
   return (
     <div className="citadel-container py-6">
@@ -101,7 +131,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Форма смены ника */}
       {showNicknameForm && (
         <Card padding="md" className="mb-6 max-w-md">
           <form onSubmit={changeNickname} className="space-y-3">
@@ -132,40 +161,5 @@ export default function ProfilePage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <ProfileStat value="128" label="Публикации" icon="📄" />
-            <ProfileStat value="342" label="Спасибо" icon="🙏" />
-            <ProfileStat value="12" label="Сделок" icon="🛡️" />
-            <ProfileStat value="$8 450" label="Оборот" icon="💰" />
-          </div>
-          <Card variant="gold" padding="md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-ink-muted uppercase tracking-wide">Общий баланс</p>
-                <p className="font-display text-2xl font-bold text-gold-400 mt-1">$2 450.75</p>
-              </div>
-              <a href="/wallet" className="text-xs text-gold-400 hover:underline">Кошелёк →</a>
-            </div>
-          </Card>
-        </div>
-        <Card padding="md">
-          <h3 className="font-display text-sm font-bold text-ink mb-3">Репутация</h3>
-          <p className="font-display text-3xl font-bold text-gold-400">1 245</p>
-          <div className="flex items-center gap-4 mt-2 text-xs text-ink-muted">
-            <span className="text-success">+128 позит.</span>
-            <span className="text-danger">-2 негат.</span>
-          </div>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-function ProfileStat({ value, label, icon }: { value: string; label: string; icon: string }) {
-  return (
-    <Card padding="sm" className="text-center">
-      <span className="text-lg block mb-1">{icon}</span>
-      <p className="font-display text-lg font-bold text-gold-400">{value}</p>
-      <p className="text-2xs text-ink-muted">{label}</p>
-    </Card>
-  );
-}
+            <ProfileStat value={stats.posts.toString()} label="Публикации" icon="📄" />
+            <ProfileStat value={stats.thanks.toString()} label="Спасибо" icon="🙏" />
