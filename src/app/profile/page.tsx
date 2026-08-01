@@ -37,15 +37,18 @@ export default function ProfilePage() {
   useEffect(() => {
     async function loadData() {
       try {
+        // 1. Получаем пользователя
         const meRes = await fetch("/api/auth/me");
         if (!meRes.ok) throw new Error("Not auth");
         const meData = await meRes.json();
         setUser(meData.user);
 
+        // 2. Получаем бейджи
         const badgesRes = await fetch(`/api/user/badges?userId=${meData.user.id}`);
         const badgesData = await badgesRes.json();
         setBadges(Array.isArray(badgesData) ? badgesData : []);
 
+        // 3. Получаем реальную статистику
         const statsRes = await fetch("/api/user/stats");
         if (statsRes.ok) {
           const statsData = await statsRes.json();
@@ -84,12 +87,14 @@ export default function ProfilePage() {
     setUser((prev) => (prev ? { ...prev, username: data.username } : prev));
   }
 
-  if (loading)
+  if (loading) {
     return (
       <div className="citadel-container py-16 text-center text-ink-muted text-sm">
         Загрузка...
       </div>
     );
+  }
+
   if (!user || !stats) return null;
 
   const formatMoney = (amount: number) => {
@@ -101,6 +106,7 @@ export default function ProfilePage() {
 
   return (
     <div className="citadel-container py-6">
+      {/* Шапка профиля */}
       <div className="flex items-center gap-4 mb-6">
         <div className="h-16 w-16 rounded-2xl border-2 border-line-gold bg-surface-2 shadow-gold flex items-center justify-center">
           <span className="font-display text-3xl font-bold text-gold-400">
@@ -138,6 +144,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* Форма смены ника */}
       {showNicknameForm && (
         <Card padding="md" className="mb-6 max-w-md">
           <form onSubmit={changeNickname} className="space-y-3">
@@ -172,6 +179,7 @@ export default function ProfilePage() {
         </Card>
       )}
 
+      {/* Статистика и баланс */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -216,6 +224,7 @@ export default function ProfilePage() {
           </Card>
         </div>
 
+        {/* Репутация */}
         <Card padding="md">
           <h3 className="font-display text-sm font-bold text-ink mb-3">
             Репутация
