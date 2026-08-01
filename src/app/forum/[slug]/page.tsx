@@ -44,13 +44,17 @@ export default function ForumPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ forumSlug: slug, title, content }),
     });
+    
+    const data = await res.json();
+    
     if (res.ok) {
       setShowNew(false);
       setTitle("");
       setContent("");
-      fetch(`/api/forum/threads?forum=${slug}`)
-        .then((r) => r.json())
-        .then((d) => setThreads(Array.isArray(d) ? d : []));
+      const updated = await fetch(`/api/forum/threads?forum=${slug}`).then((r) => r.json());
+      setThreads(Array.isArray(updated) ? updated : []);
+    } else {
+      alert("Ошибка: " + (data.error || "Не удалось создать тему"));
     }
   }
 
