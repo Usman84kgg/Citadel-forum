@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { SITE } from "@/lib/config/site";
 
 export default function RegisterPage() {
@@ -41,7 +41,8 @@ export default function RegisterPage() {
       return;
     }
 
-    router.push("/login?registered=true");
+    router.push("/");
+    router.refresh();
   }
 
   return (
@@ -54,7 +55,6 @@ export default function RegisterPage() {
           <p className="font-display text-lg font-bold text-gold-400 uppercase tracking-wider2">{SITE.name}</p>
           <p className="text-2xs text-ink-muted mt-1">Регистрация</p>
         </div>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required />
           <Input label="Имя пользователя" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="CryptoKing" required />
@@ -62,7 +62,6 @@ export default function RegisterPage() {
           {error ? <p className="text-xs text-danger text-center">{error}</p> : null}
           <Button type="submit" loading={loading} className="w-full">Зарегистрироваться</Button>
         </form>
-
         <p className="text-center text-xs text-ink-muted mt-4">
           Уже есть аккаунт? <Link href="/login" className="text-gold-400 hover:text-gold-300">Войти</Link>
         </p>
