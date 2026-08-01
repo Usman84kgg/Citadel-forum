@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
@@ -45,7 +46,6 @@ export default function ProfilePage() {
         const badgesData = await badgesRes.json();
         setBadges(Array.isArray(badgesData) ? badgesData : []);
 
-        // Получаем реальную статистику
         const statsRes = await fetch("/api/user/stats");
         if (statsRes.ok) {
           const statsData = await statsRes.json();
@@ -87,9 +87,7 @@ export default function ProfilePage() {
   if (loading) return <div className="citadel-container py-16 text-center text-ink-muted text-sm">Загрузка...</div>;
   if (!user || !stats) return null;
 
-  // Форматируем деньги (делим на 100, если в центах)
   const formatMoney = (amount: number) => {
-    // Если сумма больше 10000, скорее всего это центы
     if (amount > 10000) {
       return `$${(amount / 100).toFixed(2)}`;
     }
@@ -147,19 +145,4 @@ export default function ProfilePage() {
             {nickError && <p className="text-xs text-danger">{nickError}</p>}
             {nickSuccess && <p className="text-xs text-success">{nickSuccess}</p>}
             <div className="flex gap-2">
-              <Button type="submit" size="sm" loading={nickLoading}>
-                Сменить за $100
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setShowNicknameForm(false)}>
-                Отмена
-              </Button>
-            </div>
-          </form>
-        </Card>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <ProfileStat value={stats.posts.toString()} label="Публикации" icon="📄" />
-            <ProfileStat value={stats.thanks.toString()} label="Спасибо" icon="🙏" />
+              <Button type="submit" size
