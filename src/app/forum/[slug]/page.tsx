@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
 interface Thread {
@@ -39,6 +38,9 @@ export default function ForumPage() {
 
   async function createThread(e: React.FormEvent) {
     e.preventDefault();
+    
+    console.log("Отправка формы:", { title, content });
+    
     const res = await fetch("/api/forum/threads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -46,6 +48,7 @@ export default function ForumPage() {
     });
     
     const data = await res.json();
+    console.log("Ответ API:", data);
     
     if (res.ok) {
       setShowNew(false);
@@ -54,7 +57,7 @@ export default function ForumPage() {
       const updated = await fetch(`/api/forum/threads?forum=${slug}`).then((r) => r.json());
       setThreads(Array.isArray(updated) ? updated : []);
     } else {
-      alert("Ошибка: " + (data.error || "Не удалось создать тему"));
+      alert("Ошибка: " + (data.details || data.error || "Не удалось создать тему"));
     }
   }
 
@@ -72,16 +75,43 @@ export default function ForumPage() {
       {showNew && (
         <Card padding="lg">
           <form onSubmit={createThread} className="space-y-3">
-            <Input label="Заголовок" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Название темы" required />
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Текст сообщения..."
-              rows={5}
-              className="w-full rounded-control bg-surface border border-line-subtle p-3 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold-400 resize-none"
-              required
-            />
-            <Button type="submit" size="sm">Опубликовать</Button>
+            {/* Заменили кастомный Input на обычный input */}
+            <div>
+              <label className="block text-xs text-ink-muted mb-1">Заголовок</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => {
+                  console.log("Title изменен:", e.target.value);
+                  setTitle(e.target.value);
+                }}
+                placeholder="Название темы"
+                required
+                className="w-full rounded-control bg-surface border border-line-subtle p-3 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold-400"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs text-ink-muted mb-1">Текст</label>
+              <textarea
+                value={content}
+                onChange={(e) => {
+                  console.log("Content изменен:", e.target.value);
+                  setContent(e.target.value);
+                }}
+                placeholder="Текст сообщения..."
+                rows={5}
+                required
+                className="w-full rounded-control bg-surface border border-line-subtle p-3 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold-400 resize-none"
+              />
+            </div>
+            
+            <button 
+              type="submit"
+              className="px-4 py-2 bg-gold-400 text-black font-semibold rounded hover:bg-gold-500 transition-colors"
+            >
+              Опубликовать
+            </button>
           </form>
         </Card>
       )}
