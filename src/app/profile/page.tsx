@@ -145,4 +145,57 @@ export default function ProfilePage() {
             {nickError && <p className="text-xs text-danger">{nickError}</p>}
             {nickSuccess && <p className="text-xs text-success">{nickSuccess}</p>}
             <div className="flex gap-2">
-              <Button type="submit" size
+              <Button type="submit" size="sm" loading={nickLoading}>
+                Сменить за $100
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowNicknameForm(false)}>
+                Отмена
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <ProfileStat value={stats.posts.toString()} label="Публикации" icon="📄" />
+            <ProfileStat value={stats.thanks.toString()} label="Спасибо" icon="🙏" />
+            <ProfileStat value={stats.deals.toString()} label="Сделок" icon="🛡️" />
+            <ProfileStat value={formatMoney(stats.turnover)} label="Оборот" icon="" />
+          </div>
+          <Card variant="gold" padding="md">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-ink-muted uppercase tracking-wide">Общий баланс</p>
+                <p className="font-display text-2xl font-bold text-gold-400 mt-1">
+                  {formatMoney(stats.balance)}
+                </p>
+              </div>
+              <a href="/wallet" className="text-xs text-gold-400 hover:underline">Кошелёк →</a>
+            </div>
+          </Card>
+        </div>
+
+        <Card padding="md">
+          <h3 className="font-display text-sm font-bold text-ink mb-3">Репутация</h3>
+          <p className="font-display text-3xl font-bold text-gold-400">{stats.reputation}</p>
+          <div className="flex items-center gap-4 mt-2 text-xs text-ink-muted">
+            <span className="text-success">+{stats.positiveRep} позит.</span>
+            <span className="text-danger">-{stats.negativeRep} негат.</span>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function ProfileStat({ value, label, icon }: { value: string; label: string; icon: string }) {
+  return (
+    <Card padding="sm" className="text-center">
+      <span className="text-lg block mb-1">{icon}</span>
+      <p className="font-display text-lg font-bold text-gold-400">{value}</p>
+      <p className="text-2xs text-ink-muted">{label}</p>
+    </Card>
+  );
+}
