@@ -401,9 +401,9 @@ function AdsTab() {
                   {a.is_active ? "Активен" : "Выкл"}
                 </Badge>
                 <Button size="sm" variant="ghost" onClick={() => toggle(a.id)}>
-                  {a.is_active ? "🔵" : "⚫"}
+                  {a.is_active ? "Откл." : "Вкл."}
                 </Button>
-                <Button size="sm" variant="danger" onClick={() => remove(a.id)}>✕</Button>
+                <Button size="sm" variant="danger" onClick={() => remove(a.id)}>Удалить</Button>
               </div>
             </div>
           ))
