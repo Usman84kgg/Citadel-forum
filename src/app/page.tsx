@@ -1,8 +1,6 @@
 "use client";
 
-// ВСЕ ИМПОРТЫ ДОЛЖНЫ БЫТЬ ЗДЕСЬ, В САМОМ НАЧАЛЕ
 import { useEffect, useState } from "react";
-import { ESCROW_RULES } from "@/lib/config/site";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,7 +29,69 @@ export default function HomePage() {
   );
 }
 
-// Компонент форума
+function WelcomeBlock() {
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => setIsLoggedIn(r.ok))
+      .catch(() => setIsLoggedIn(false));
+  }, []);
+
+  return (
+    <section className="relative overflow-hidden bg-surface-2 border-b border-line-subtle">
+      <img src="/AADEF62D-15DC-44AE-880F-AEBCDF96F03A.png" alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />
+      <div className="absolute inset-0 bg-gradient-to-r from-base via-base/80 to-transparent" />
+      <div className="citadel-container relative py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+          <div className="lg:col-span-2">
+            <p className="text-xs uppercase tracking-brand text-ink-muted mb-2">Добро пожаловать в</p>
+            <h1 className="citadel-gold-text font-display text-4xl sm:text-5xl font-bold uppercase tracking-wider2 mb-3">CITADEL</h1>
+            <p className="text-sm text-ink-secondary max-w-lg leading-relaxed mb-4">Приватное сообщество для общения, безопасных сделок и размещения услуг в одном месте.</p>
+            <div className="flex flex-wrap gap-3 mb-4">
+              <StatBadge value="12 487" label="Пользователей" />
+              <StatBadge value="342" label="Онлайн" />
+              <StatBadge value="5 892" label="Тем" />
+              <StatBadge value="21 456" label="Сообщений" />
+            </div>
+          </div>
+
+          {isLoggedIn === false && (
+            <div className="lg:justify-self-end">
+              <Card variant="gold" padding="lg" className="text-center w-full max-w-xs">
+                <img src="/708EF42A-E02E-487F-91D5-F03B44F921D8.png" alt="CITADEL" className="h-12 w-12 mx-auto rounded-xl mb-3" />
+                <p className="text-sm text-gold-300 font-display font-semibold mb-2">Стань частью закрытого сообщества</p>
+                <p className="text-xs text-ink-muted mb-4">Получи доступ к уникальным возможностям и привилегиям CITADEL</p>
+                <a href="/register"><Button className="w-full">Стать участником</Button></a>
+              </Card>
+            </div>
+          )}
+
+          {isLoggedIn === true && (
+            <div className="lg:justify-self-end">
+              <Card variant="gold" padding="lg" className="text-center w-full max-w-xs">
+                <img src="/708EF42A-E02E-487F-91D5-F03B44F921D8.png" alt="CITADEL" className="h-12 w-12 mx-auto rounded-xl mb-3" />
+                <p className="text-sm text-gold-300 font-display font-semibold mb-2">Добро пожаловать обратно!</p>
+                <p className="text-xs text-ink-muted mb-4">Вы вошли в закрытое сообщество CITADEL</p>
+                <a href="/forum/general"><Button className="w-full">Перейти на форум</Button></a>
+              </Card>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function StatBadge({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="bg-surface/60 backdrop-blur border border-line-subtle rounded-lg px-4 py-2.5">
+      <p className="font-display text-lg font-bold text-gold-400">{value}</p>
+      <p className="text-2xs text-ink-muted uppercase">{label}</p>
+    </div>
+  );
+}
+
 function ForumSections() {
   const [forums, setForums] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,32 +99,23 @@ function ForumSections() {
   useEffect(() => {
     fetch("/api/forum/forums")
       .then((r) => r.json())
-      .then((data) => {
-        setForums(Array.isArray(data) ? data : []);
-        setLoading(false);
-      })
+      .then((data) => { setForums(Array.isArray(data) ? data : []); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return (
-      <section>
-        <h2 className="font-display text-lg font-bold text-ink mb-3">Основные разделы</h2>
-        <div className="text-sm text-ink-muted">Загрузка разделов...</div>
-      </section>
-    );
-  }
+  if (loading) return (
+    <section>
+      <h2 className="font-display text-lg font-bold text-ink mb-3">Основные разделы</h2>
+      <div className="text-sm text-ink-muted">Загрузка разделов...</div>
+    </section>
+  );
 
-  if (forums.length === 0) {
-    return (
-      <section>
-        <h2 className="font-display text-lg font-bold text-ink mb-3">Основные разделы</h2>
-        <Card padding="md">
-          <p className="text-sm text-ink-muted text-center">Разделы загружаются.</p>
-        </Card>
-      </section>
-    );
-  }
+  if (forums.length === 0) return (
+    <section>
+      <h2 className="font-display text-lg font-bold text-ink mb-3">Основные разделы</h2>
+      <Card padding="md"><p className="text-sm text-ink-muted text-center">Разделы загружаются.</p></Card>
+    </section>
+  );
 
   return (
     <section>
@@ -75,7 +126,7 @@ function ForumSections() {
             <Card variant={f.slug === "vip" ? "gold" : "interactive"} padding="sm">
               <div className="flex items-start gap-3">
                 <span className="text-xl">
-                  {f.slug === "vip" ? "🔒" : f.slug === "chat" ? "⚡" : f.slug === "market" ? "🏪" : f.slug === "escrow" ? "🛡️" : f.slug === "vacancies" ? "💼" : f.slug === "resumes" ? "📄" : f.slug === "freebies" ? "" : f.slug === "support" ? "🎧" : f.slug === "resources" ? "📚" : f.slug === "news" ? "📢" : f.slug === "rules" ? "📋" : "💬"}
+                  {f.slug === "vip" ? "🔒" : f.slug === "chat" ? "⚡" : f.slug === "market" ? "🏪" : f.slug === "escrow" ? "🛡️" : f.slug === "vacancies" ? "💼" : f.slug === "resumes" ? "📄" : f.slug === "freebies" ? "🎁" : f.slug === "support" ? "🎧" : f.slug === "resources" ? "📚" : f.slug === "news" ? "📢" : f.slug === "rules" ? "📋" : "💬"}
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -97,52 +148,10 @@ function ForumSections() {
   );
 }
 
-// Остальные компоненты (WelcomeBlock, StatBadge и т.д.)
-function WelcomeBlock() {
-  return (
-    <section className="relative overflow-hidden bg-surface-2 border-b border-line-subtle">
-      <img src="/AADEF62D-15DC-44AE-880F-AEBCDF96F03A.png" alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />
-      <div className="absolute inset-0 bg-gradient-to-r from-base via-base/80 to-transparent" />
-      <div className="citadel-container relative py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
-          <div className="lg:col-span-2">
-            <p className="text-xs uppercase tracking-brand text-ink-muted mb-2">Добро пожаловать в</p>
-            <h1 className="citadel-gold-text font-display text-4xl sm:text-5xl font-bold uppercase tracking-wider2 mb-3">CITADEL</h1>
-            <p className="text-sm text-ink-secondary max-w-lg leading-relaxed mb-4">Приватное сообщество для общения, безопасных сделок и размещения услуг в одном месте.</p>
-            <div className="flex flex-wrap gap-3 mb-4">
-              <StatBadge value="12 487" label="Пользователей" />
-              <StatBadge value="342" label="Онлайн" />
-              <StatBadge value="5 892" label="Тем" />
-              <StatBadge value="21 456" label="Сообщений" />
-            </div>
-          </div>
-          <div className="lg:justify-self-end">
-            <Card variant="gold" padding="lg" className="text-center w-full max-w-xs">
-              <img src="/708EF42A-E02E-487F-91D5-F03B44F921D8.png" alt="CITADEL" className="h-12 w-12 mx-auto rounded-xl mb-3" />
-              <p className="text-sm text-gold-300 font-display font-semibold mb-2">Стань частью закрытого сообщества</p>
-              <p className="text-xs text-ink-muted mb-4">Получи доступ к уникальным возможностям и привилегиям CITADEL</p>
-              <a href="/register"><Button className="w-full">Стать участником</Button></a>
-            </Card>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function StatBadge({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="bg-surface/60 backdrop-blur border border-line-subtle rounded-lg px-4 py-2.5">
-      <p className="font-display text-lg font-bold text-gold-400">{value}</p>
-      <p className="text-2xs text-ink-muted uppercase">{label}</p>
-    </div>
-  );
-}
-
 function AnnouncementBar() {
   return (
     <Card padding="sm" className="flex items-center gap-3">
-      <span className="text-lg"></span>
+      <span className="text-lg">📢</span>
       <div className="flex-1 min-w-0">
         <p className="text-xs text-gold-300 font-medium truncate">Важное объявление для всех участников сообщества</p>
         <p className="text-2xs text-ink-muted truncate">Ознакомьтесь с обновлёнными правилами платформы</p>
@@ -164,11 +173,6 @@ function TopUsers() {
     <section>
       <div className="flex items-center gap-3 mb-2">
         <h2 className="font-display text-sm font-bold text-ink">Топ пользователей</h2>
-        <div className="flex gap-1">
-          {["Неделя","Месяц","Год"].map((t) => (
-            <button key={t} className="text-2xs px-2 py-0.5 rounded-full bg-surface-2 text-ink-muted hover:text-ink transition-colors">{t}</button>
-          ))}
-        </div>
       </div>
       <Card padding="none">
         {users.map((u, i) => (
@@ -176,7 +180,7 @@ function TopUsers() {
             <span className="font-display text-xs text-gold-400 w-5">#{i+1}</span>
             <div className="h-6 w-6 rounded-full bg-surface-3 flex items-center justify-center text-2xs font-bold text-gold-400">{u.name[0]}</div>
             <span className="flex-1 text-xs text-ink truncate">{u.name}</span>
-            <Badge variant={u.badge==="VIP"?"gold":"info"} size="sm">{u.badge}</Badge>
+            <Badge variant={u.badge === "VIP" ? "gold" : "info"} size="sm">{u.badge}</Badge>
             <span className="text-xs font-semibold text-gold-400">{u.score}</span>
           </div>
         ))}
@@ -202,7 +206,7 @@ function LatestDeals() {
               <p className="text-2xs text-ink-muted">{d.from} → {d.to}</p>
             </div>
             <span className="text-xs font-semibold text-ink">{d.amount}</span>
-            <Badge variant={d.status==="finished"?"success":"info"} size="sm">{d.status==="finished"?"Заверш.":"Актив."}</Badge>
+            <Badge variant={d.status === "finished" ? "success" : "info"} size="sm">{d.status === "finished" ? "Заверш." : "Актив."}</Badge>
           </div>
         ))}
       </Card>
