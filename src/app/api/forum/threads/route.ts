@@ -26,7 +26,11 @@ export async function POST(request: Request) {
     const { payload } = await jwtVerify(token, SECRET);
     const { forumSlug, title, content } = await request.json();
 
-    // Вызываем createThread и получаем результат с ошибкой
+    console.log("=== DEBUG: Создание темы ===");
+    console.log("authorId:", payload.sub);
+    console.log("forumSlug:", forumSlug);
+    console.log("title:", title);
+
     const result = await forumDB.createThread({
       forumSlug,
       title,
@@ -34,17 +38,27 @@ export async function POST(request: Request) {
       authorId: payload.sub as string,
     });
 
+    console.log("Результат:", JSON.stringify(result, null, 2));
+
     if (!result.thread) {
-      console.error("Ошибка создания темы:", result.error);
+      const errorMsg = result.error 
+        ? JSON.stringify(result.error) 
+        : "Неизвестная ошибка (error object is null/undefined)";
+      
+      console.error("Ошибка создания темы:", errorMsg);
+      
       return NextResponse.json({ 
         error: "Ошибка создания темы",
-        details: result.error?.message || "Неизвестная ошибка"
+        details: errorMsg
       }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, thread: result.thread });
   } catch (error) {
-    console.error("Критическая ошибка в POST /api/forum/threads:", error);
-    return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 });
+    console.error("Критическая ошибка:", error);
+    return NextResponse.json({ 
+      error: "Ошибка сервера",
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 }
