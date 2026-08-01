@@ -28,10 +28,9 @@ export const forumDB = {
       .single();
     
     if (data) {
-      // Пытаемся увеличить счетчик, игнорируя ошибки, если функции нет в БД
       const { error } = await supabase.rpc("increment_view", { thread_id: threadId });
       if (error) {
-        console.warn("Функция increment_view не найдена или ошибка:", error.message);
+        console.warn("Функция increment_view не найдена:", error.message);
       }
     }
     return data;
@@ -54,9 +53,13 @@ export const forumDB = {
       .eq("slug", data.forumSlug)
       .single();
     
-    if (!forum) return null;
+    if (!forum) {
+      return { thread: null, error: { message: `Раздел "${data.forumSlug}" не найден` } };
+    }
 
     const now = new Date().toISOString();
+    const slug = data.title.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") + "-" + Date.now();
+    
     const { data: thread, error } = await supabase
       .from("threads")
       .insert({
@@ -64,7 +67,7 @@ export const forumDB = {
         author_id: data.authorId,
         title: data.title,
         content: data.content,
-        slug: data.title.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now(),
+        slug: slug,
         is_pinned: false,
         is_locked: false,
         view_count: 0,
@@ -75,18 +78,12 @@ export const forumDB = {
       .select()
       .single();
 
-    if (error) {
-      console.error("Ошибка создания темы:", error);
-      return null;
-    }
-
-    return thread;
+    return { thread, error };
   },
 
   async createPost(data: { threadId: string; content: string; authorId: string }) {
     const now = new Date().toISOString();
     
-    // 1. Создаем пост
     const { data: post, error: postError } = await supabase
       .from("posts")
       .insert({
@@ -99,11 +96,9 @@ export const forumDB = {
       .single();
 
     if (postError) {
-      console.error("Ошибка создания поста:", postError);
-      return null;
+      return { post: null, error: postError };
     }
 
-    // 2. Обновляем статистику темы (счетчик и дата последнего сообщения)
     const { data: currentThread } = await supabase
       .from("threads")
       .select("post_count")
@@ -118,7 +113,7 @@ export const forumDB = {
       })
       .eq("id", data.threadId);
 
-    return post;
+    return { post, error: null };
   },
 
   async thankPost(postId: string, userId: string) {
