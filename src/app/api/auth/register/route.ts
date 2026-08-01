@@ -3,6 +3,8 @@ import { hashPassword } from "@/lib/auth/password";
 import { createAccessToken, createRefreshToken } from "@/lib/auth/jwt";
 import { supabase } from "@/lib/db/supabase";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
