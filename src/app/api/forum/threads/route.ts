@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { forumDB } from "@/lib/db/forum";
+import { cookies } from "next/headers"; // <-- Надежный способ читать куки
 
-const SECRET = new TextEncoder().encode(process.env.AUTH_SECRET || "citadel-dev-secret-change-in-production");
+const SECRET = new TextEncoder().encode(
+  process.env.AUTH_SECRET || "citadel-dev-secret-change-in-production"
+);
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -12,20 +15,34 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const token = request.headers.get("cookie")?.split("; ").find((c) => c.startsWith("access_token="))?.split("=")[1];
-  if (!token) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
-
   try {
+    // Читаем куки правильно через next/headers
+    const cookieStore = cookies();
+    const token = cookieStore.get("access_token")?.value;
+
+    if (!token) {
+      console.error("Токен не найден. Список доступных кук:", cookieStore.getAll().map(c => c.name));
+      return NextResponse.json({ error: "Не авторизован (токен не найден)" }, { status: 401 });
+    }
+
     const { payload } = await jwtVerify(token, SECRET);
     const { forumSlug, title, content } = await request.json();
+
     const thread = await forumDB.createThread({
       forumSlug,
       title,
       content,
       authorId: payload.sub as string,
     });
+
+    if (!thread) {
+      console.error("forumDB.createThread вернул null");
+      return NextResponse.json({ error: "Ошибка создания темы в базе данных" }, { status: 500 });
+    }
+
     return NextResponse.json({ success: true, thread });
-  } catch {
-    return NextResponse.json({ error: "Ошибка" }, { status: 401 });
+  } catch (error) {
+    console.error("Критическая ошибка в POST /api/forum/threads:", error);
+    return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 });
   }
 }
