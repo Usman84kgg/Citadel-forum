@@ -3,7 +3,7 @@ import { jwtVerify } from "jose";
 import { forumDB } from "@/lib/db/forum";
 import { cookies } from "next/headers";
 
-const SECRET = new ().encode(
+const SECRET = new TextEncoder().encode(
   process.env.AUTH_SECRET || "citadel-dev-secret-change-in-production"
 );
 
