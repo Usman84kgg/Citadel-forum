@@ -1,23 +1,49 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { SITE } from "@/lib/config/site";
 
-type AuthUser = { id: string; email: string; username: string } | null;
+type AuthUser = {
+  id: string;
+  email: string;
+  username: string;
+  role: string;
+  avatarUrl: string | null;
+} | null;
+
+const UNKNOWN = undefined as unknown as AuthUser;
 
 export function Header() {
   const router = useRouter();
-  const [user, setUser] = useState<AuthUser>(undefined as unknown as AuthUser);
+  const pathname = usePathname();
+  const [user, setUser] = useState<AuthUser>(UNKNOWN);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/auth/me")
+  const refreshUser = useCallback(() => {
+    fetch("/api/auth/me", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => setUser(data?.user ?? null))
       .catch(() => setUser(null));
   }, []);
+
+  // Хедер живёт в корневом layout и не размонтируется при переходах
+  // между страницами, поэтому проверяем сессию заново при каждой смене
+  // маршрута — иначе после входа/выхода шапка показывает старое состояние.
+  useEffect(() => {
+    refreshUser();
+  }, [pathname, refreshUser]);
+
+  // На iOS Safari страница может восстановиться из bfcache со старым
+  // снимком DOM. В этом случае тоже нужно перепроверить сессию.
+  useEffect(() => {
+    function onPageShow(event: PageTransitionEvent) {
+      if (event.persisted) refreshUser();
+    }
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, [refreshUser]);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -28,7 +54,8 @@ export function Header() {
     router.refresh();
   }
 
-  const authReady = user !== (undefined as unknown as AuthUser);
+  const authReady = user !== UNKNOWN;
+  const isAdmin = !!user && (user.role === "owner" || user.role === "admin");
 
   return (
     <header className="sticky top-0 z-50 border-b border-line-subtle bg-base/95 backdrop-blur-md">
@@ -58,13 +85,15 @@ export function Header() {
           <div className="flex items-center gap-2">
             {user ? (
               <>
-                {user.email === "citadelforum77@gmail.com" && (
-                  <NavLink href="/admin">Админка</NavLink>
-                )}
+                {isAdmin && <NavLink href="/admin">Админка</NavLink>}
                 <NavLink href="/profile">
                   <span className="flex items-center gap-1.5">
-                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-surface-3 text-2xs font-bold text-gold-400">
-                      {user.username?.charAt(0).toUpperCase() ?? "U"}
+                    <span className="inline-flex h-5 w-5 items-center justify-center overflow-hidden rounded-full bg-surface-3 text-2xs font-bold text-gold-400">
+                      {user.avatarUrl ? (
+                        <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        user.username?.charAt(0).toUpperCase() ?? "U"
+                      )}
                     </span>
                     {user.username}
                   </span>
