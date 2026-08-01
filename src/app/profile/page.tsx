@@ -84,7 +84,12 @@ export default function ProfilePage() {
     setUser((prev) => (prev ? { ...prev, username: data.username } : prev));
   }
 
-  if (loading) return <div className="citadel-container py-16 text-center text-ink-muted text-sm">Загрузка...</div>;
+  if (loading)
+    return (
+      <div className="citadel-container py-16 text-center text-ink-muted text-sm">
+        Загрузка...
+      </div>
+    );
   if (!user || !stats) return null;
 
   const formatMoney = (amount: number) => {
@@ -123,7 +128,11 @@ export default function ProfilePage() {
           <Button variant="ghost" size="sm" onClick={() => router.push("/login")}>
             Выйти
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowNicknameForm(!showNicknameForm)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowNicknameForm(!showNicknameForm)}
+          >
             Сменить ник ($100)
           </Button>
         </div>
@@ -133,7 +142,8 @@ export default function ProfilePage() {
         <Card padding="md" className="mb-6 max-w-md">
           <form onSubmit={changeNickname} className="space-y-3">
             <p className="text-xs text-ink-muted">
-              Стоимость смены ника: <span className="text-gold-400 font-bold">$100</span>
+              Стоимость смены ника:{" "}
+              <span className="text-gold-400 font-bold">$100</span>
             </p>
             <Input
               label="Новый ник"
@@ -143,12 +153,18 @@ export default function ProfilePage() {
               required
             />
             {nickError && <p className="text-xs text-danger">{nickError}</p>}
-            {nickSuccess && <p className="text-xs text-success">{nickSuccess}</p>}
+            {nickSuccess && (
+              <p className="text-xs text-success">{nickSuccess}</p>
+            )}
             <div className="flex gap-2">
               <Button type="submit" size="sm" loading={nickLoading}>
                 Сменить за $100
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => setShowNicknameForm(false)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowNicknameForm(false)}
+              >
                 Отмена
               </Button>
             </div>
@@ -159,27 +175,54 @@ export default function ProfilePage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <ProfileStat value={stats.posts.toString()} label="Публикации" icon="📄" />
-            <ProfileStat value={stats.thanks.toString()} label="Спасибо" icon="🙏" />
-            <ProfileStat value={stats.deals.toString()} label="Сделок" icon="🛡️" />
-            <ProfileStat value={formatMoney(stats.turnover)} label="Оборот" icon="" />
+            <ProfileStat
+              value={stats.posts.toString()}
+              label="Публикации"
+              icon="📄"
+            />
+            <ProfileStat
+              value={stats.thanks.toString()}
+              label="Спасибо"
+              icon="🙏"
+            />
+            <ProfileStat
+              value={stats.deals.toString()}
+              label="Сделок"
+              icon="️"
+            />
+            <ProfileStat
+              value={formatMoney(stats.turnover)}
+              label="Оборот"
+              icon="💰"
+            />
           </div>
           <Card variant="gold" padding="md">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-ink-muted uppercase tracking-wide">Общий баланс</p>
+                <p className="text-xs text-ink-muted uppercase tracking-wide">
+                  Общий баланс
+                </p>
                 <p className="font-display text-2xl font-bold text-gold-400 mt-1">
                   {formatMoney(stats.balance)}
                 </p>
               </div>
-              <a href="/wallet" className="text-xs text-gold-400 hover:underline">Кошелёк →</a>
+              <a
+                href="/wallet"
+                className="text-xs text-gold-400 hover:underline"
+              >
+                Кошелёк →
+              </a>
             </div>
           </Card>
         </div>
 
         <Card padding="md">
-          <h3 className="font-display text-sm font-bold text-ink mb-3">Репутация</h3>
-          <p className="font-display text-3xl font-bold text-gold-400">{stats.reputation}</p>
+          <h3 className="font-display text-sm font-bold text-ink mb-3">
+            Репутация
+          </h3>
+          <p className="font-display text-3xl font-bold text-gold-400">
+            {stats.reputation}
+          </p>
           <div className="flex items-center gap-4 mt-2 text-xs text-ink-muted">
             <span className="text-success">+{stats.positiveRep} позит.</span>
             <span className="text-danger">-{stats.negativeRep} негат.</span>
@@ -190,7 +233,15 @@ export default function ProfilePage() {
   );
 }
 
-function ProfileStat({ value, label, icon }: { value: string; label: string; icon: string }) {
+function ProfileStat({
+  value,
+  label,
+  icon,
+}: {
+  value: string;
+  label: string;
+  icon: string;
+}) {
   return (
     <Card padding="sm" className="text-center">
       <span className="text-lg block mb-1">{icon}</span>
