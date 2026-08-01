@@ -23,8 +23,11 @@ const variantStyles: Record<BadgeVariant, string> = {
 
 const effectStyles: Record<BadgeEffect, string> = {
   solid: "",
-  neon: "shadow-[0_0_8px_var(--badge-glow)]",
-  fire: "animate-pulse bg-gradient-to-r from-orange-500 via-red-500 to-yellow-500 text-white",
+  // Раньше здесь было яркое неоновое свечение (box-shadow с большим
+  // размытием). Заменено на тонкую обводку — акцент остаётся,
+  // но без агрессивного свечения.
+  neon: "ring-1 ring-inset ring-current/50",
+  fire: "bg-gradient-to-r from-orange-500 via-red-500 to-yellow-500 text-white",
   outline: "bg-transparent border",
 };
 
