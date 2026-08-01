@@ -2,7 +2,7 @@ import { supabase } from "./supabase";
 
 export const forumDB = {
   async getThreads(forumSlug: string) {
-    const { data: forum } = await supabase
+    consdata: forum } = await supabase
       .from("forums")
       .select("id")
       .eq("slug", forumSlug)
