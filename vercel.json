@@ -1,6 +1,1 @@
-{
-  "env": {
-    "DATABASE_URL": "postgresql://postgres:Imamkiss500%29%29@db.lewytkfykerbxgtnyljv.supabase.co:6543/postgres?pgbouncer=true",
-    "DIRECT_URL": "postgresql://postgres:Imamkiss500%29%29@db.lewytkfykerbxgtnyljv.supabase.co:5432/postgres"
-  }
-}
+{}
