@@ -9,7 +9,7 @@ import AdSlots from "@/components/ads/ad-slots";
 export default function HomePage() {
   return (
     <div className="space-y-0 pb-8">
-      <WelcomeBlock />
+      <RegisterPrompt />
       <AdSlots />
       <div className="citadel-container space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -28,7 +28,7 @@ export default function HomePage() {
   );
 }
 
-function WelcomeBlock() {
+function RegisterPrompt() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -37,55 +37,22 @@ function WelcomeBlock() {
       .catch(() => setIsLoggedIn(false));
   }, []);
 
-  return (
-    <section className="relative overflow-hidden bg-surface-2 border-b border-line-subtle">
-      <img src="/AADEF62D-15DC-44AE-880F-AEBCDF96F03A.png" alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />
-      <div className="absolute inset-0 bg-gradient-to-r from-base via-base/80 to-transparent" />
-      <div className="citadel-container relative py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
-          <div className="lg:col-span-2">
-            <p className="text-xs uppercase tracking-brand text-ink-muted mb-2">Добро пожаловать в</p>
-            <h1 className="citadel-gold-text font-display text-4xl sm:text-5xl font-bold uppercase tracking-wider2 mb-3">CITADEL</h1>
-            <p className="text-sm text-ink-secondary max-w-lg leading-relaxed mb-4">Приватное сообщество для общения, безопасных сделок и размещения услуг в одном месте.</p>
-            <div className="flex flex-wrap gap-3 mb-4">
-              <StatBadge value="12 487" label="Пользователей" />
-              <StatBadge value="342" label="Онлайн" />
-              <StatBadge value="5 892" label="Тем" />
-              <StatBadge value="21 456" label="Сообщений" />
-            </div>
-          </div>
-          {isLoggedIn === false && (
-            <div className="lg:justify-self-end">
-              <Card variant="gold" padding="lg" className="text-center w-full max-w-xs">
-                <img src="/708EF42A-E02E-487F-91D5-F03B44F921D8.png" alt="CITADEL" className="h-12 w-12 mx-auto rounded-xl mb-3" />
-                <p className="text-sm text-gold-300 font-display font-semibold mb-2">Стань частью закрытого сообщества</p>
-                <p className="text-xs text-ink-muted mb-4">Получи доступ к уникальным возможностям и привилегиям CITADEL</p>
-                <a href="/register"><Button className="w-full">Стать участником</Button></a>
-              </Card>
-            </div>
-          )}
-          {isLoggedIn === true && (
-            <div className="lg:justify-self-end">
-              <Card variant="gold" padding="lg" className="text-center w-full max-w-xs">
-                <img src="/708EF42A-E02E-487F-91D5-F03B44F921D8.png" alt="CITADEL" className="h-12 w-12 mx-auto rounded-xl mb-3" />
-                <p className="text-sm text-gold-300 font-display font-semibold mb-2">Добро пожаловать обратно!</p>
-                <p className="text-xs text-ink-muted mb-4">Вы вошли в закрытое сообщество CITADEL</p>
-                <a href="/forum/general"><Button className="w-full">Перейти на форум</Button></a>
-              </Card>
-            </div>
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}
+  if (isLoggedIn !== false) return null;
 
-function StatBadge({ value, label }: { value: string; label: string }) {
   return (
-    <div className="bg-surface/60 backdrop-blur border border-line-subtle rounded-lg px-4 py-2.5">
-      <p className="font-display text-lg font-bold text-gold-400">{value}</p>
-      <p className="text-2xs text-ink-muted uppercase">{label}</p>
-    </div>
+    <section className="citadel-container pt-4 pb-2">
+      <Card padding="lg">
+        <h1 className="font-display text-lg sm:text-xl font-bold text-ink mb-2">
+          Хотите разместить свою публикацию?
+        </h1>
+        <p className="text-xs text-ink-muted mb-4">
+          Необходимо зарегистрироваться, это откроет доступ ко всем функциям платформы
+        </p>
+        <a href="/register">
+          <Button className="w-full">Зарегистрироваться</Button>
+        </a>
+      </Card>
+    </section>
   );
 }
 
