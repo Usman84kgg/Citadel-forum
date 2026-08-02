@@ -13,6 +13,7 @@ interface Ad {
   text_content: string | null;
   link_url: string | null;
   priority: number;
+  is_active: boolean; // <-- ДОБАВЛЕНО
 }
 
 export default function AdSlots() {
