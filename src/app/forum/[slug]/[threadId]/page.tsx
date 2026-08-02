@@ -2,20 +2,25 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { AuthorCard } from "@/components/forum/author-card";
+import type { AuthorBadge, AuthorStats } from "@/lib/db/userProfile";
 
-interface PostAuthor {
+interface Author {
   id: string;
   username: string;
   avatar_url: string | null;
+  badges: AuthorBadge[];
+  stats: AuthorStats;
 }
 
 interface Post {
   id: string;
   thread_id: string;
   author_id: string;
-  author?: PostAuthor | null;
+  author?: Author | null;
   content: string;
   reaction_count: number;
   is_edited: boolean;
@@ -26,7 +31,7 @@ interface Thread {
   id: string;
   title: string;
   author_id: string;
-  author?: PostAuthor | null;
+  author?: Author | null;
   content: string;
   is_locked: boolean;
   view_count: number;
@@ -40,6 +45,7 @@ export default function ThreadPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<{ id: string } | null | undefined>(undefined);
 
   useEffect(() => {
     Promise.all([
@@ -54,6 +60,13 @@ export default function ThreadPage() {
       setLoading(false);
     });
   }, [slug, threadId]);
+
+  useEffect(() => {
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setCurrentUser(data?.user ?? null))
+      .catch(() => setCurrentUser(null));
+  }, []);
 
   async function submitReply(e: React.FormEvent) {
     e.preventDefault();
@@ -98,66 +111,74 @@ export default function ThreadPage() {
     );
   }
 
-  const threadAuthorName = thread.author?.username || "Аноним";
-
   return (
     <div className="citadel-container py-6 space-y-4">
       <Button variant="ghost" size="sm" onClick={() => router.push(`/forum/${slug}`)}>
         ← Назад к разделу
       </Button>
 
+      {/* Шапка автора темы */}
+      <Card padding="lg">
+        {thread.author && (
+          <AuthorCard
+            username={thread.author.username}
+            avatarUrl={thread.author.avatar_url}
+            badges={thread.author.badges}
+            stats={thread.author.stats}
+            size="lg"
+          />
+        )}
+      </Card>
+
+      {/* Сама тема */}
       <Card padding="lg">
         <h1 className="font-display text-xl font-bold text-gold-400">{thread.title}</h1>
         <p className="text-xs text-ink-muted mt-1">
-          {threadAuthorName} · {new Date(thread.created_at).toLocaleDateString("ru-RU")} ·{" "}
-          {thread.view_count} просм.
+          {new Date(thread.created_at).toLocaleDateString("ru-RU")} · {thread.view_count} просм.
         </p>
+        <p className="text-sm text-ink-secondary whitespace-pre-wrap mt-3">{thread.content}</p>
       </Card>
 
-      {posts.map((post) => {
-        const authorName = post.author?.username || "Аноним";
-        const authorAvatar = post.author?.avatar_url || null;
+      {/* Комментарии */}
+      <div>
+        <h2 className="font-display text-sm font-bold text-ink mb-2">
+          Комментарии {posts.length > 0 && posts.length}
+        </h2>
 
-        return (
-          <Card key={post.id} padding="md">
-            <div className="flex items-start gap-3">
-              <div className="shrink-0">
-                {authorAvatar ? (
-                  <img
-                    src={authorAvatar}
-                    alt={authorName}
-                    className="h-8 w-8 rounded-full object-cover border border-line-subtle"
-                  />
-                ) : (
-                  <div className="h-8 w-8 rounded-full bg-surface-3 flex items-center justify-center text-xs font-bold text-gold-400">
-                    {authorName[0]?.toUpperCase()}
-                  </div>
-                )}
+        <div className="space-y-3">
+          {posts.map((post) => (
+            <Card key={post.id} padding="md">
+              {post.author && (
+                <AuthorCard
+                  username={post.author.username}
+                  avatarUrl={post.author.avatar_url}
+                  badges={post.author.badges}
+                  stats={post.author.stats}
+                  size="sm"
+                />
+              )}
+              <p className="text-sm text-ink-secondary whitespace-pre-wrap mt-2">
+                {post.content}
+              </p>
+              <div className="flex items-center gap-3 mt-2">
+                <span className="text-2xs text-ink-muted">
+                  {new Date(post.created_at).toLocaleDateString("ru-RU")}
+                  {post.is_edited && " · (изм.)"}
+                </span>
+                <button
+                  onClick={() => thankPost(post.id)}
+                  className="flex items-center gap-1 text-xs text-ink-muted hover:text-gold-400 transition-colors"
+                >
+                  🙏 {post.reaction_count || 0}
+                </button>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-medium text-ink">{authorName}</span>
-                  <span className="text-2xs text-ink-muted">
-                    {new Date(post.created_at).toLocaleDateString("ru-RU")}
-                  </span>
-                  {post.is_edited && <span className="text-2xs text-ink-faint">(изм.)</span>}
-                </div>
-                <p className="text-sm text-ink-secondary whitespace-pre-wrap">{post.content}</p>
-                <div className="flex items-center gap-3 mt-2">
-                  <button
-                    onClick={() => thankPost(post.id)}
-                    className="flex items-center gap-1 text-xs text-ink-muted hover:text-gold-400 transition-colors"
-                  >
-                    🙏 {post.reaction_count || 0}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </Card>
-        );
-      })}
+            </Card>
+          ))}
+        </div>
+      </div>
 
-      {!thread.is_locked && (
+      {/* Форма ответа / блок для гостей */}
+      {thread.is_locked ? null : currentUser === undefined ? null : currentUser ? (
         <Card padding="lg">
           <form onSubmit={submitReply} className="space-y-3">
             <textarea
@@ -170,6 +191,17 @@ export default function ThreadPage() {
             />
             <Button type="submit" size="sm">Ответить</Button>
           </form>
+        </Card>
+      ) : (
+        <Card padding="md">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-sm text-ink-muted">
+              Войдите, чтобы оставить комментарий.
+            </p>
+            <Link href="/login">
+              <Button size="sm">Войти</Button>
+            </Link>
+          </div>
         </Card>
       )}
     </div>
