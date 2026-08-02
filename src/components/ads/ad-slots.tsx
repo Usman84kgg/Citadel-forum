@@ -16,10 +16,19 @@ interface Ad {
   is_active: boolean;
 }
 
+const ALL_SLOTS = [
+  { key: "slot_1", title: "Рекламный блок 1" },
+  { key: "slot_2", title: "Рекламный блок 2" },
+  { key: "slot_3", title: "Рекламный блок 3" },
+  { key: "slot_4", title: "Рекламный блок 4" },
+  { key: "slot_5", title: "Рекламный блок 5" },
+  { key: "slot_6", title: "Рекламный блок 6" },
+];
+
 export default function AdSlots() {
   const [ads, setAds] = useState<Ad[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeSlides, setActiveSlides] = useState<Record<string, number>>({});
+  const [scrollIndexes, setScrollIndexes] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetch("/api/admin/ads")
@@ -32,18 +41,29 @@ export default function AdSlots() {
       .catch(() => setLoading(false));
   }, []);
 
-  // Автоматическая прокрутка каждые 5 секунд для каждого слота
+  // Инициализация индексов
+  useEffect(() => {
+    if (ads.length === 0) return;
+    const initial: Record<string, number> = {};
+    ALL_SLOTS.forEach((s) => {
+      const count = ads.filter((a) => a.slot === s.key).length;
+      if (count > 0) initial[s.key] = 0;
+    });
+    setScrollIndexes(initial);
+  }, [ads]);
+
+  // Автопрокрутка каждые 5 секунд
   useEffect(() => {
     const interval = setInterval(() => {
-      setActiveSlides((prev) => {
-        const newSlides = { ...prev };
-        Object.keys(newSlides).forEach((slot) => {
-          const slotAds = ads.filter((ad) => ad.slot === slot);
-          if (slotAds.length > 1) {
-            newSlides[slot] = (newSlides[slot] + 1) % slotAds.length;
+      setScrollIndexes((prev) => {
+        const next = { ...prev };
+        ALL_SLOTS.forEach((s) => {
+          const count = ads.filter((a) => a.slot === s.key).length;
+          if (count > 2) {
+            next[s.key] = ((next[s.key] ?? 0) + 1) % (count - 2);
           }
         });
-        return newSlides;
+        return next;
       });
     }, 5000);
 
@@ -51,50 +71,55 @@ export default function AdSlots() {
   }, [ads]);
 
   const getAdsBySlot = (slotName: string) => {
-    return ads.filter((ad) => ad.slot === slotName).sort((a, b) => b.priority - a.priority);
+    return ads
+      .filter((ad) => ad.slot === slotName)
+      .sort((a, b) => b.priority - a.priority);
   };
 
   const renderAdContent = (ad: Ad) => {
     if (ad.media_type === "video" && ad.media_url) {
       return (
-        <video 
-          src={ad.media_url} 
-          autoPlay 
-          muted 
-          loop 
-          playsInline 
+        <video
+          src={ad.media_url}
+          autoPlay
+          muted
+          loop
+          playsInline
           className="w-full h-full object-cover"
         />
       );
     }
     if ((ad.media_type === "image" || ad.media_type === "gif") && ad.media_url) {
       return (
-        <img 
-          src={ad.media_url} 
-          alt={ad.title} 
+        <img
+          src={ad.media_url}
+          alt={ad.title}
           className="w-full h-full object-cover"
         />
       );
     }
     return (
-      <div className="flex flex-col items-center justify-center p-4 text-center h-full">
+      <div className="flex flex-col items-center justify-center p-3 text-center h-full">
         {ad.text_content && (
-          <p className="text-sm sm:text-base font-medium text-ink mb-1">{ad.text_content}</p>
+          <p className="text-xs sm:text-sm font-medium text-ink mb-1">
+            {ad.text_content}
+          </p>
         )}
-        {ad.title && (
-          <p className="text-xs text-ink-muted">{ad.title}</p>
-        )}
+        {ad.title && <p className="text-2xs text-ink-muted">{ad.title}</p>}
       </div>
     );
   };
 
-  const AdSlot = ({ slotName, title }: { slotName: string; title: string }) => {
-    const slotAds = getAdsBySlot(slotName);
-    const currentSlide = activeSlides[slotName] || 0;
+  const AdSlot = ({ slotKey, title }: { slotKey: string; title: string }) => {
+    const slotAds = getAdsBySlot(slotKey);
+    const scrollIndex = scrollIndexes[slotKey] ?? 0;
 
     if (slotAds.length === 0) {
       return (
-        <Card padding="md" className="border border-dashed border-line-subtle bg-surface/30">
+        <Card
+          padding="md"
+          className="border border-dashed border-line-subtle bg-surface/30"
+        >
           <p className="text-xs text-ink-muted text-center py-2">
             {title} — настройте в админ-панели
           </p>
@@ -102,49 +127,63 @@ export default function AdSlots() {
       );
     }
 
-    const currentAd = slotAds[currentSlide];
-    const Wrapper = currentAd.link_url ? "a" : "div";
-    const wrapperProps = currentAd.link_url
-      ? { 
-          href: currentAd.link_url, 
-          target: "_blank", 
-          rel: "noopener noreferrer",
-          className: "block group" 
-        }
-      : { className: "block" };
+    // Показываем до 3 объявлений одновременно
+    const visibleAds = slotAds.slice(scrollIndex, scrollIndex + 3);
+    const hasMore = slotAds.length > 3;
 
     return (
-      <Wrapper {...wrapperProps}>
-        <Card padding="none" className="relative overflow-hidden border border-gold-400/20 hover:border-gold-400/50 transition-all">
-          <div className="relative w-full h-24 sm:h-28 bg-surface-2 flex items-center justify-center">
-            {/* Анимированный переход */}
-            <div 
-              key={currentAd.id}
-              className="absolute inset-0 flex items-center justify-center animate-fadeIn"
-            >
-              {renderAdContent(currentAd)}
-            </div>
-            
-            <Badge variant="gold" size="sm" className="absolute top-2 left-2 pointer-events-none z-10">
-              Реклама
-            </Badge>
+      <Card
+        padding="none"
+        className="relative overflow-hidden border border-gold-400/20"
+      >
+        <div className="relative w-full bg-surface-2">
+          {/* Контейнер с несколькими объявлениями */}
+          <div className="flex overflow-hidden">
+            {visibleAds.map((ad, idx) => {
+              const Wrapper = ad.link_url ? "a" : "div";
+              const wrapperProps = ad.link_url
+                ? {
+                    href: ad.link_url,
+                    target: "_blank",
+                    rel: "noopener noreferrer",
+                    className: "block group flex-1 min-w-0",
+                  }
+                : { className: "block flex-1 min-w-0" };
 
-            {/* Индикаторы (точки) */}
-            {slotAds.length > 1 && (
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                {slotAds.map((_, idx) => (
-                  <div
-                    key={idx}
-                    className={`h-1.5 rounded-full transition-all duration-500 ${
-                      idx === currentSlide ? "w-6 bg-gold-400" : "w-1.5 bg-ink-muted/40"
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
+              return (
+                <Wrapper key={ad.id} {...wrapperProps}>
+                  <div className="relative h-24 sm:h-28 border-r border-line-subtle last:border-r-0 flex items-center justify-center">
+                    <div className="absolute inset-0 flex items-center justify-center animate-fadeIn">
+                      {renderAdContent(ad)}
+                    </div>
+                    <Badge
+                      variant="gold"
+                      size="sm"
+                      className="absolute top-1 left-1 pointer-events-none z-10 scale-75"
+                    >
+                      Рекл.
+                    </Badge>
+                  </div>
+                </Wrapper>
+              );
+            })}
           </div>
-        </Card>
-      </Wrapper>
+
+          {/* Индикаторы прокрутки */}
+          {hasMore && (
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+              {Array.from({ length: slotAds.length - 2 }, (_, i) => (
+                <div
+                  key={i}
+                  className={`h-1 rounded-full transition-all duration-500 ${
+                    i === scrollIndex ? "w-4 bg-gold-400" : "w-1 bg-ink-muted/40"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </Card>
     );
   };
 
@@ -153,7 +192,11 @@ export default function AdSlots() {
       <div className="citadel-container py-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {[...Array(6)].map((_, i) => (
-            <Card key={i} padding="md" className="h-24 bg-surface animate-pulse" />
+            <Card
+              key={i}
+              padding="md"
+              className="h-24 bg-surface animate-pulse"
+            />
           ))}
         </div>
       </div>
@@ -162,15 +205,14 @@ export default function AdSlots() {
 
   return (
     <div className="citadel-container py-4 space-y-4">
-      <h2 className="font-display text-sm font-bold text-ink mb-3">Партнёры и реклама</h2>
-      
+      <h2 className="font-display text-sm font-bold text-ink mb-3">
+        Партнёры и реклама
+      </h2>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        <AdSlot slotName="slot_1" title="Рекламный блок 1" />
-        <AdSlot slotName="slot_2" title="Рекламный блок 2" />
-        <AdSlot slotName="slot_3" title="Рекламный блок 3" />
-        <AdSlot slotName="slot_4" title="Рекламный блок 4" />
-        <AdSlot slotName="slot_5" title="Рекламный блок 5" />
-        <AdSlot slotName="slot_6" title="Рекламный блок 6" />
+        {ALL_SLOTS.map((s) => (
+          <AdSlot key={s.key} slotKey={s.key} title={s.title} />
+        ))}
       </div>
     </div>
   );
