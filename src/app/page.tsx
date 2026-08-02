@@ -4,15 +4,14 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AdBanner } from "@/components/ads/ad-banner";
+import AdSlots from "@/components/ads/ad-slots";
 
 export default function HomePage() {
   return (
     <div className="space-y-0 pb-8">
-      <AdBanner />
       <WelcomeBlock />
+      <AdSlots />
       <div className="citadel-container space-y-4">
-        <AnnouncementBar />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
             <ForumSections />
@@ -140,18 +139,6 @@ function ForumSections() {
         ))}
       </div>
     </section>
-  );
-}
-
-function AnnouncementBar() {
-  return (
-    <Card padding="sm" className="flex items-center gap-3">
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-gold-300 font-medium truncate">Важное объявление для всех участников сообщества</p>
-        <p className="text-2xs text-ink-muted truncate">Ознакомьтесь с обновлёнными правилами платформы</p>
-      </div>
-      <Button variant="ghost" size="sm">Подробнее →</Button>
-    </Card>
   );
 }
 
