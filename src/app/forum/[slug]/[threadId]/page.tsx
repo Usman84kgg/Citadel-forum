@@ -5,10 +5,17 @@ import { useParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
+interface PostAuthor {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+}
+
 interface Post {
   id: string;
   thread_id: string;
   author_id: string;
+  author?: PostAuthor | null;
   content: string;
   reaction_count: number;
   is_edited: boolean;
@@ -19,6 +26,7 @@ interface Thread {
   id: string;
   title: string;
   author_id: string;
+  author?: PostAuthor | null;
   content: string;
   is_locked: boolean;
   view_count: number;
@@ -35,10 +43,12 @@ export default function ThreadPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`/api/forum/threads?forum=${slug}`).then(r => r.json()),
-      fetch(`/api/forum/posts?threadId=${threadId}`).then(r => r.json()),
+      fetch(`/api/forum/threads?forum=${slug}`).then((r) => r.json()),
+      fetch(`/api/forum/posts?threadId=${threadId}`).then((r) => r.json()),
     ]).then(([threads, postData]) => {
-      const found = Array.isArray(threads) ? threads.find((t: Thread) => t.id === threadId) : null;
+      const found = Array.isArray(threads)
+        ? threads.find((t: Thread) => t.id === threadId)
+        : null;
       setThread(found || null);
       setPosts(Array.isArray(postData) ? postData : []);
       setLoading(false);
@@ -56,8 +66,8 @@ export default function ThreadPage() {
     if (data.success) {
       setReply("");
       fetch(`/api/forum/posts?threadId=${threadId}`)
-        .then(r => r.json())
-        .then(d => setPosts(Array.isArray(d) ? d : []));
+        .then((r) => r.json())
+        .then((d) => setPosts(Array.isArray(d) ? d : []));
     }
   }
 
@@ -68,47 +78,84 @@ export default function ThreadPage() {
       body: JSON.stringify({ postId }),
     });
     fetch(`/api/forum/posts?threadId=${threadId}`)
-      .then(r => r.json())
-      .then(d => setPosts(Array.isArray(d) ? d : []));
+      .then((r) => r.json())
+      .then((d) => setPosts(Array.isArray(d) ? d : []));
   }
 
-  if (loading) return <div className="citadel-container py-16 text-center text-ink-muted text-sm">Загрузка...</div>;
-  if (!thread) return <div className="citadel-container py-16 text-center text-ink-muted text-sm">Тема не найдена</div>;
+  if (loading) {
+    return (
+      <div className="citadel-container py-16 text-center text-ink-muted text-sm">
+        Загрузка...
+      </div>
+    );
+  }
+
+  if (!thread) {
+    return (
+      <div className="citadel-container py-16 text-center text-ink-muted text-sm">
+        Тема не найдена
+      </div>
+    );
+  }
+
+  const threadAuthorName = thread.author?.username || "Аноним";
 
   return (
     <div className="citadel-container py-6 space-y-4">
-      <Button variant="ghost" size="sm" onClick={() => router.push(`/forum/${slug}`)}>← Назад к разделу</Button>
+      <Button variant="ghost" size="sm" onClick={() => router.push(`/forum/${slug}`)}>
+        ← Назад к разделу
+      </Button>
 
       <Card padding="lg">
         <h1 className="font-display text-xl font-bold text-gold-400">{thread.title}</h1>
-        <p className="text-xs text-ink-muted mt-1">{thread.author_id} · {new Date(thread.created_at).toLocaleDateString("ru-RU")} · {thread.view_count} просм.</p>
+        <p className="text-xs text-ink-muted mt-1">
+          {threadAuthorName} · {new Date(thread.created_at).toLocaleDateString("ru-RU")} ·{" "}
+          {thread.view_count} просм.
+        </p>
       </Card>
 
-      {posts.map((post) => (
-        <Card key={post.id} padding="md">
-          <div className="flex items-start gap-3">
-            <div className="h-8 w-8 rounded-full bg-surface-3 flex items-center justify-center text-xs font-bold text-gold-400 shrink-0">
-              {post.author_id?.[0]?.toUpperCase() || "U"}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm font-medium text-ink">{post.author_id}</span>
-                <span className="text-2xs text-ink-muted">{new Date(post.created_at).toLocaleDateString("ru-RU")}</span>
-                {post.is_edited && <span className="text-2xs text-ink-faint">(изм.)</span>}
+      {posts.map((post) => {
+        const authorName = post.author?.username || "Аноним";
+        const authorAvatar = post.author?.avatar_url || null;
+
+        return (
+          <Card key={post.id} padding="md">
+            <div className="flex items-start gap-3">
+              <div className="shrink-0">
+                {authorAvatar ? (
+                  <img
+                    src={authorAvatar}
+                    alt={authorName}
+                    className="h-8 w-8 rounded-full object-cover border border-line-subtle"
+                  />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-surface-3 flex items-center justify-center text-xs font-bold text-gold-400">
+                    {authorName[0]?.toUpperCase()}
+                  </div>
+                )}
               </div>
-              <p className="text-sm text-ink-secondary whitespace-pre-wrap">{post.content}</p>
-              <div className="flex items-center gap-3 mt-2">
-                <button
-                  onClick={() => thankPost(post.id)}
-                  className="flex items-center gap-1 text-xs text-ink-muted hover:text-gold-400 transition-colors"
-                >
-                  🙏 {post.reaction_count || 0}
-                </button>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-medium text-ink">{authorName}</span>
+                  <span className="text-2xs text-ink-muted">
+                    {new Date(post.created_at).toLocaleDateString("ru-RU")}
+                  </span>
+                  {post.is_edited && <span className="text-2xs text-ink-faint">(изм.)</span>}
+                </div>
+                <p className="text-sm text-ink-secondary whitespace-pre-wrap">{post.content}</p>
+                <div className="flex items-center gap-3 mt-2">
+                  <button
+                    onClick={() => thankPost(post.id)}
+                    className="flex items-center gap-1 text-xs text-ink-muted hover:text-gold-400 transition-colors"
+                  >
+                    🙏 {post.reaction_count || 0}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </Card>
-      ))}
+          </Card>
+        );
+      })}
 
       {!thread.is_locked && (
         <Card padding="lg">
