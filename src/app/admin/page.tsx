@@ -9,16 +9,16 @@ import { Badge } from "@/components/ui/badge";
 interface DepositItem { id: string; userId: string; currency: string; amount: number; method: string; txId?: string; status: string; createdAt: string; }
 interface WithdrawalItem { id: string; userId: string; currency: string; amount: number; method: string; addressTo: string; status: string; createdAt: string; }
 interface AddressItem { currency: string; network: string; address: string; label: string; isActive: boolean; }
-interface AdItem { 
-  id: string; 
-  title: string; 
-  slot: string; 
-  media_url: string | null; 
-  media_type: string; 
+interface AdItem {
+  id: string;
+  title: string;
+  slot: string;
+  media_url: string | null;
+  media_type: string;
   text_content: string | null;
   link_url: string | null;
-  is_active: boolean; 
-  priority: number; 
+  is_active: boolean;
+  priority: number;
 }
 
 export default function AdminPage() {
@@ -333,12 +333,11 @@ function BadgesTab() {
 }
 
 // ==========================================================
-// РЕКЛАМА
+// РЕКЛАМА — теперь один общий слот "banner"
 // ==========================================================
 function AdsTab() {
   const [ads, setAds] = useState<AdItem[]>([]);
   const [title, setTitle] = useState("");
-  const [slot, setSlot] = useState("slot_1");
   const [mediaUrl, setMediaUrl] = useState("");
   const [mediaType, setMediaType] = useState("text");
   const [textContent, setTextContent] = useState("");
@@ -346,7 +345,9 @@ function AdsTab() {
   const [priority, setPriority] = useState("0");
   const [errorMsg, setErrorMsg] = useState("");
 
-  useEffect(() => { 
+  const slot = "banner";
+
+  useEffect(() => {
     fetch("/api/admin/ads")
       .then(r => r.json())
       .then(d => setAds(Array.isArray(d) ? d : []))
@@ -355,7 +356,7 @@ function AdsTab() {
 
   async function create() {
     setErrorMsg("");
-    
+
     if (!title.trim()) {
       setErrorMsg("Введите название");
       return;
@@ -370,9 +371,9 @@ function AdsTab() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, slot, mediaUrl, mediaType, textContent, linkUrl, priority: parseInt(priority) }),
       });
-      
+
       const data = await res.json();
-      
+
       if (res.ok) {
         setTitle(""); setMediaUrl(""); setTextContent(""); setLinkUrl("");
         refresh();
@@ -394,36 +395,28 @@ function AdsTab() {
     refresh();
   }
 
-  function refresh() { 
+  function refresh() {
     fetch("/api/admin/ads")
       .then(r => r.json())
-      .then(d => setAds(Array.isArray(d) ? d : [])); 
+      .then(d => setAds(Array.isArray(d) ? d : []));
   }
 
   return (
     <div className="space-y-6 max-w-lg">
       <Card padding="lg" className="space-y-3">
         <p className="text-sm font-semibold text-ink">Добавить объявление / баннер</p>
-        
+        <p className="text-xs text-ink-muted">
+          Баннер один общий на всю платформу: показывается сверху главной и через каждые 6 публикаций в форуме/маркете.
+          Если баннеров несколько — они крутятся по кругу.
+        </p>
+
         {errorMsg && (
           <div className="p-3 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-400">
             ❌ {errorMsg}
           </div>
         )}
-        
-        <Input label="Название (для админки)" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Новогодняя распродажа" />
 
-        <div>
-          <label className="text-xs text-ink-muted mb-1 block">Выберите слот (блок на главной)</label>
-          <select value={slot} onChange={(e) => setSlot(e.target.value)} className="w-full bg-surface border border-line-subtle rounded-control px-3 py-2 text-sm text-ink">
-            <option value="slot_1">Рекламный блок 1</option>
-            <option value="slot_2">Рекламный блок 2</option>
-            <option value="slot_3">Рекламный блок 3</option>
-            <option value="slot_4">Рекламный блок 4</option>
-            <option value="slot_5">Рекламный блок 5</option>
-            <option value="slot_6">Рекламный блок 6</option>
-          </select>
-        </div>
+        <Input label="Название (для админки)" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Новогодняя распродажа" />
 
         <div>
           <label className="text-xs text-ink-muted mb-1 block">Тип медиа</label>
@@ -464,7 +457,7 @@ function AdsTab() {
             <div key={a.id} className="flex items-center justify-between py-2 border-b border-line-subtle last:border-0">
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-ink truncate">{a.title}</p>
-                <p className="text-2xs text-ink-muted">{a.slot} · {a.media_type}</p>
+                <p className="text-2xs text-ink-muted">{a.media_type}</p>
               </div>
               <div className="flex items-center gap-1">
                 <Badge variant={a.is_active ? "success" : "muted"} size="sm">{a.is_active ? "Активно" : "Выкл"}</Badge>
