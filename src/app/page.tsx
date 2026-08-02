@@ -110,13 +110,15 @@ function ForumSections() {
 }
 
 function TopUsers() {
-  const users = [
-    { name: "CryptoKing", score: 1245, badge: "VIP" },
-    { name: "DarkMaster", score: 980, badge: "Pro" },
-    { name: "GhostTrader", score: 856, badge: "VIP" },
-    { name: "ShadowDev", score: 742, badge: "Dev" },
-    { name: "PixelQueen", score: 631, badge: "Pro" },
-  ];
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/stats/top-users")
+      .then((r) => r.json())
+      .then((data) => setUsers(Array.isArray(data) ? data : []))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <section>
@@ -124,15 +126,37 @@ function TopUsers() {
         <h2 className="font-display text-sm font-bold text-ink">Топ пользователей</h2>
       </div>
       <Card padding="none">
-        {users.map((u, i) => (
-          <div key={u.name} className="flex items-center gap-2 px-3 py-2.5 border-b border-line-subtle last:border-0">
-            <span className="font-display text-xs text-gold-400 w-5">#{i + 1}</span>
-            <div className="h-6 w-6 rounded-full bg-surface-3 flex items-center justify-center text-2xs font-bold text-gold-400">{u.name[0]}</div>
-            <span className="flex-1 text-xs text-ink truncate">{u.name}</span>
-            <Badge variant={u.badge === "VIP" ? "gold" : "info"} size="sm">{u.badge}</Badge>
-            <span className="text-xs font-semibold text-gold-400">{u.score}</span>
-          </div>
-        ))}
+        {loading ? (
+          <p className="text-xs text-ink-muted text-center py-4">Загрузка...</p>
+        ) : users.length === 0 ? (
+          <p className="text-xs text-ink-muted text-center py-4">Пока нет данных</p>
+        ) : (
+          users.map((u, i) => (
+            <a
+              key={u.id}
+              href={`/u/${u.username}`}
+              className="flex items-center gap-2 px-3 py-2.5 border-b border-line-subtle last:border-0 hover:bg-surface-2 transition-colors"
+            >
+              <span className="font-display text-xs text-gold-400 w-5">#{i + 1}</span>
+              <div className="h-6 w-6 rounded-full bg-surface-3 flex items-center justify-center text-2xs font-bold text-gold-400 overflow-hidden shrink-0">
+                {u.avatarUrl ? (
+                  <img src={u.avatarUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  u.username?.[0]?.toUpperCase()
+                )}
+              </div>
+              <span className="flex-1 text-xs text-ink truncate">{u.username}</span>
+              {u.badges?.[0] && (
+                <Badge variant={(u.badges[0].variant as any) || "gold"} size="sm">
+                  {u.badges[0].label}
+                </Badge>
+              )}
+              <span className="text-xs font-semibold text-gold-400">
+                {u.reputation > 0 ? `+${u.reputation}` : u.reputation}
+              </span>
+            </a>
+          ))
+        )}
       </Card>
     </section>
   );
@@ -160,35 +184,65 @@ function LatestDeals() {
           </div>
         ))}
       </Card>
+      <p className="text-2xs text-ink-faint text-center mt-1">Демо-данные, подключим после escrow.ts</p>
     </section>
   );
 }
 
 function LatestListings() {
-  const listings = [
-    { name: "Разработка смарт-контрактов", author: "ShadowDev", time: "2ч", price: "$500" },
-    { name: "Дизайн логотипов", author: "PixelQueen", time: "5ч", price: "$150" },
-    { name: "Продвижение в Telegram", author: "CryptoKing", time: "8ч", price: "$300" },
-    { name: "Видеомонтаж", author: "DarkMaster", time: "12ч", price: "$200" },
-  ];
+  const [listings, setListings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/stats/latest-listings")
+      .then((r) => r.json())
+      .then((data) => setListings(Array.isArray(data) ? data : []))
+      .finally(() => setLoading(false));
+  }, []);
+
+  function timeAgo(dateStr: string) {
+    const diffMs = Date.now() - new Date(dateStr).getTime();
+    const hours = Math.floor(diffMs / 3600000);
+    if (hours < 1) return "только что";
+    if (hours < 24) return `${hours}ч`;
+    return `${Math.floor(hours / 24)}д`;
+  }
 
   return (
     <section>
       <h2 className="font-display text-sm font-bold text-ink mb-2">Последние объявления</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {listings.map((l) => (
-          <Card key={l.name} variant="interactive" padding="sm">
-            <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded-full bg-surface-3 flex items-center justify-center text-2xs font-bold text-gold-400 shrink-0">{l.author[0]}</div>
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-ink truncate">{l.name}</p>
-                <p className="text-2xs text-ink-muted">{l.author} · {l.time}</p>
-                <p className="text-xs font-semibold text-gold-400 mt-0.5">{l.price}</p>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+      {loading ? (
+        <p className="text-xs text-ink-muted">Загрузка...</p>
+      ) : listings.length === 0 ? (
+        <Card padding="md"><p className="text-sm text-ink-muted text-center">Объявлений пока нет</p></Card>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {listings.map((l) => (
+            <a key={l.id} href={`/market/${l.id}`}>
+              <Card variant="interactive" padding="sm">
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-full bg-surface-3 flex items-center justify-center text-2xs font-bold text-gold-400 shrink-0 overflow-hidden">
+                    {l.seller?.avatar_url ? (
+                      <img src={l.seller.avatar_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      l.seller?.username?.[0]?.toUpperCase() || "U"
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-ink truncate">{l.title}</p>
+                    <p className="text-2xs text-ink-muted">
+                      {l.seller?.username || "Аноним"} · {timeAgo(l.created_at)}
+                    </p>
+                    <p className="text-xs font-semibold text-gold-400 mt-0.5">
+                      {l.price ? `$${(l.price / 100).toFixed(0)}` : "—"}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </a>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -206,6 +260,7 @@ function OnlineNow() {
         <span className="text-xs text-ink-muted">+334</span>
         <Badge variant="success" size="sm">127 онлайн</Badge>
       </Card>
+      <p className="text-2xs text-ink-faint text-center mt-1">Демо-данные, нужен механизм отслеживания активности</p>
     </section>
   );
 }
