@@ -13,12 +13,13 @@ interface Ad {
   text_content: string | null;
   link_url: string | null;
   priority: number;
-  is_active: boolean; // <-- ДОБАВЛЕНО
+  is_active: boolean;
 }
 
 export default function AdSlots() {
   const [ads, setAds] = useState<Ad[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeSlides, setActiveSlides] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetch("/api/admin/ads")
@@ -31,12 +32,28 @@ export default function AdSlots() {
       .catch(() => setLoading(false));
   }, []);
 
-  // Функция для получения рекламы по слоту
+  // Автоматическая прокрутка каждые 5 секунд для каждого слота
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveSlides((prev) => {
+        const newSlides = { ...prev };
+        Object.keys(newSlides).forEach((slot) => {
+          const slotAds = ads.filter((ad) => ad.slot === slot);
+          if (slotAds.length > 1) {
+            newSlides[slot] = (newSlides[slot] + 1) % slotAds.length;
+          }
+        });
+        return newSlides;
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [ads]);
+
   const getAdsBySlot = (slotName: string) => {
     return ads.filter((ad) => ad.slot === slotName).sort((a, b) => b.priority - a.priority);
   };
 
-  // Рендер контента рекламы
   const renderAdContent = (ad: Ad) => {
     if (ad.media_type === "video" && ad.media_url) {
       return (
@@ -59,7 +76,6 @@ export default function AdSlots() {
         />
       );
     }
-    // Текстовый режим
     return (
       <div className="flex flex-col items-center justify-center p-4 text-center h-full">
         {ad.text_content && (
@@ -72,10 +88,10 @@ export default function AdSlots() {
     );
   };
 
-  // Компонент одного рекламного слота
   const AdSlot = ({ slotName, title }: { slotName: string; title: string }) => {
     const slotAds = getAdsBySlot(slotName);
-    
+    const currentSlide = activeSlides[slotName] || 0;
+
     if (slotAds.length === 0) {
       return (
         <Card padding="md" className="border border-dashed border-line-subtle bg-surface/30">
@@ -86,33 +102,49 @@ export default function AdSlots() {
       );
     }
 
-    return (
-      <div className="space-y-2">
-        {slotAds.map((ad) => {
-          const Wrapper = ad.link_url ? "a" : "div";
-          const wrapperProps = ad.link_url
-            ? { 
-                href: ad.link_url, 
-                target: "_blank", 
-                rel: "noopener noreferrer",
-                className: "block group" 
-              }
-            : { className: "block" };
+    const currentAd = slotAds[currentSlide];
+    const Wrapper = currentAd.link_url ? "a" : "div";
+    const wrapperProps = currentAd.link_url
+      ? { 
+          href: currentAd.link_url, 
+          target: "_blank", 
+          rel: "noopener noreferrer",
+          className: "block group" 
+        }
+      : { className: "block" };
 
-          return (
-            <Wrapper key={ad.id} {...wrapperProps}>
-              <Card padding="none" className="relative overflow-hidden border border-gold-400/20 hover:border-gold-400/50 transition-all">
-                <div className="relative w-full h-24 sm:h-28 bg-surface-2 flex items-center justify-center">
-                  {renderAdContent(ad)}
-                  <Badge variant="gold" size="sm" className="absolute top-2 left-2 pointer-events-none">
-                    Реклама
-                  </Badge>
-                </div>
-              </Card>
-            </Wrapper>
-          );
-        })}
-      </div>
+    return (
+      <Wrapper {...wrapperProps}>
+        <Card padding="none" className="relative overflow-hidden border border-gold-400/20 hover:border-gold-400/50 transition-all">
+          <div className="relative w-full h-24 sm:h-28 bg-surface-2 flex items-center justify-center">
+            {/* Анимированный переход */}
+            <div 
+              key={currentAd.id}
+              className="absolute inset-0 flex items-center justify-center animate-fadeIn"
+            >
+              {renderAdContent(currentAd)}
+            </div>
+            
+            <Badge variant="gold" size="sm" className="absolute top-2 left-2 pointer-events-none z-10">
+              Реклама
+            </Badge>
+
+            {/* Индикаторы (точки) */}
+            {slotAds.length > 1 && (
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                {slotAds.map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={`h-1.5 rounded-full transition-all duration-500 ${
+                      idx === currentSlide ? "w-6 bg-gold-400" : "w-1.5 bg-ink-muted/40"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
+      </Wrapper>
     );
   };
 
