@@ -163,28 +163,62 @@ function TopUsers() {
 }
 
 function LatestDeals() {
-  const deals = [
-    { name: "Дизайн лендинга", from: "CryptoKing", to: "PixelQueen", amount: "$250", status: "finished" },
-    { name: "Аудит безопасности", from: "DarkMaster", to: "GhostTrader", amount: "$1 200", status: "active" },
-    { name: "Разработка бота", from: "ShadowDev", to: "CryptoKing", amount: "$800", status: "active" },
-  ];
+  const [deals, setDeals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/stats/latest-deals")
+      .then((r) => r.json())
+      .then((data) => setDeals(Array.isArray(data) ? data : []))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const statusLabel: Record<string, string> = {
+    draft: "Черновик",
+    pending: "Ожидание",
+    active: "Актив.",
+    delivered: "Доставлено",
+    completed: "Заверш.",
+    disputed: "Спор",
+    cancelled: "Отменена",
+  };
+
+  const statusVariant: Record<string, "success" | "info" | "warning" | "danger"> = {
+    completed: "success",
+    delivered: "success",
+    active: "info",
+    pending: "info",
+    disputed: "warning",
+    cancelled: "danger",
+  };
 
   return (
     <section>
       <h2 className="font-display text-sm font-bold text-ink mb-2">Последние сделки</h2>
       <Card padding="none">
-        {deals.map((d) => (
-          <div key={d.name} className="flex items-center gap-2 px-3 py-2.5 border-b border-line-subtle last:border-0">
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-ink truncate">{d.name}</p>
-              <p className="text-2xs text-ink-muted">{d.from} → {d.to}</p>
+        {loading ? (
+          <p className="text-xs text-ink-muted text-center py-4">Загрузка...</p>
+        ) : deals.length === 0 ? (
+          <p className="text-xs text-ink-muted text-center py-4">Сделок пока нет</p>
+        ) : (
+          deals.map((d) => (
+            <div key={d.id} className="flex items-center gap-2 px-3 py-2.5 border-b border-line-subtle last:border-0">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-ink truncate">{d.title}</p>
+                <p className="text-2xs text-ink-muted">
+                  {d.buyer?.username || "?"} → {d.seller?.username || "?"}
+                </p>
+              </div>
+              <span className="text-xs font-semibold text-ink">
+                ${(d.amount / 100).toFixed(0)}
+              </span>
+              <Badge variant={statusVariant[d.status] || "info"} size="sm">
+                {statusLabel[d.status] || d.status}
+              </Badge>
             </div>
-            <span className="text-xs font-semibold text-ink">{d.amount}</span>
-            <Badge variant={d.status === "finished" ? "success" : "info"} size="sm">{d.status === "finished" ? "Заверш." : "Актив."}</Badge>
-          </div>
-        ))}
+          ))
+        )}
       </Card>
-      <p className="text-2xs text-ink-faint text-center mt-1">Демо-данные, подключим после escrow.ts</p>
     </section>
   );
 }
@@ -260,7 +294,7 @@ function OnlineNow() {
         <span className="text-xs text-ink-muted">+334</span>
         <Badge variant="success" size="sm">127 онлайн</Badge>
       </Card>
-      <p className="text-2xs text-ink-faint text-center mt-1">Демо-данные, нужен механизм отслеживания активности</p>
+      <p className="text-2xs text-ink-faint text-center mt-1">Демо-данные — нужен трекер активности (см. ниже)</p>
     </section>
   );
 }
