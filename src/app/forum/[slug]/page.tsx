@@ -155,7 +155,14 @@ export default function ForumPage() {
                     <p className="text-sm font-medium text-ink truncate">{t.title}</p>
                   </div>
                   <p className="text-2xs text-ink-muted mt-0.5">
-                    {authorName} · {new Date(t.created_at).toLocaleDateString("ru-RU")}
+                    <Link
+                      href={`/u/${authorName}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="hover:text-gold-400 transition-colors"
+                    >
+                      {authorName}
+                    </Link>{" "}
+                    · {new Date(t.created_at).toLocaleDateString("ru-RU")}
                   </p>
                 </div>
 
