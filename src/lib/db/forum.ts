@@ -37,11 +37,14 @@ export const forumDB = {
           id,
           username,
           avatar_url
+        ),
+        forum:forum_id (
+          slug
         )
       `)
       .eq("id", threadId)
       .single();
-    
+
     if (data) {
       const { error } = await supabase.rpc("increment_view", { thread_id: threadId });
       if (error) {
