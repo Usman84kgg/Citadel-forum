@@ -10,9 +10,17 @@ export const forumDB = {
     
     if (!forum) return [];
 
+    // Получаем темы с данными авторов
     const { data } = await supabase
       .from("threads")
-      .select("*")
+      .select(`
+        *,
+        author:author_id (
+          id,
+          username,
+          avatar_url
+        )
+      `)
       .eq("forum_id", forum.id)
       .order("is_pinned", { ascending: false })
       .order("last_post_at", { ascending: false });
@@ -23,7 +31,14 @@ export const forumDB = {
   async getThread(threadId: string) {
     const { data } = await supabase
       .from("threads")
-      .select("*")
+      .select(`
+        *,
+        author:author_id (
+          id,
+          username,
+          avatar_url
+        )
+      `)
       .eq("id", threadId)
       .single();
     
@@ -37,9 +52,17 @@ export const forumDB = {
   },
 
   async getPosts(threadId: string) {
+    // Получаем посты с данными авторов
     const { data } = await supabase
       .from("posts")
-      .select("*")
+      .select(`
+        *,
+        author:author_id (
+          id,
+          username,
+          avatar_url
+        )
+      `)
       .eq("thread_id", threadId)
       .order("created_at", { ascending: true });
 
