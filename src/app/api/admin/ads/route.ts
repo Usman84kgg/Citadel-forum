@@ -39,6 +39,7 @@ export async function POST(req: Request) {
       link_url: b.linkUrl || null,
       is_active: true,
       priority: b.priority || 0,
+      created_by: "admin", // <-- ДОБАВЛЕНО
     };
 
     if (b.mediaUrl && b.mediaType !== "text") {
