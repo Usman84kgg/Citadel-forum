@@ -98,4 +98,11 @@
   .animate-fadeIn {
     animation: fadeIn 0.5s ease-in-out;
   }
+
+  .thread-title {
+    font-family: var(--font-ui), system-ui, sans-serif;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+  }
 }
