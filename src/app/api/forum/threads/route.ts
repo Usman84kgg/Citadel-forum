@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { forumDB } from "@/lib/db/forum";
+import { getAuthorsProfileData } from "@/lib/db/userProfile";
 import { cookies } from "next/headers";
 
 const SECRET = new TextEncoder().encode(
@@ -11,7 +12,22 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const forumSlug = searchParams.get("forum") || "general";
   const threads = await forumDB.getThreads(forumSlug);
-  return NextResponse.json(threads);
+
+  const authorIds = threads.map((t: any) => t.author_id).filter(Boolean);
+  const profiles = await getAuthorsProfileData(authorIds);
+
+  const enriched = threads.map((t: any) => ({
+    ...t,
+    author: t.author
+      ? {
+          ...t.author,
+          badges: profiles[t.author_id]?.badges || [],
+          stats: profiles[t.author_id]?.stats || { balance: 0, reputation: 0, deals: 0 },
+        }
+      : null,
+  }));
+
+  return NextResponse.json(enriched);
 }
 
 export async function POST(request: Request) {
@@ -26,11 +42,6 @@ export async function POST(request: Request) {
     const { payload } = await jwtVerify(token, SECRET);
     const { forumSlug, title, content } = await request.json();
 
-    console.log("=== DEBUG: Создание темы ===");
-    console.log("authorId:", payload.sub);
-    console.log("forumSlug:", forumSlug);
-    console.log("title:", title);
-
     const result = await forumDB.createThread({
       forumSlug,
       title,
@@ -38,27 +49,28 @@ export async function POST(request: Request) {
       authorId: payload.sub as string,
     });
 
-    console.log("Результат:", JSON.stringify(result, null, 2));
-
     if (!result.thread) {
-      const errorMsg = result.error 
-        ? JSON.stringify(result.error) 
+      const errorMsg = result.error
+        ? JSON.stringify(result.error)
         : "Неизвестная ошибка (error object is null/undefined)";
-      
-      console.error("Ошибка создания темы:", errorMsg);
-      
-      return NextResponse.json({ 
-        error: "Ошибка создания темы",
-        details: errorMsg
-      }, { status: 500 });
+
+      return NextResponse.json(
+        {
+          error: "Ошибка создания темы",
+          details: errorMsg,
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ success: true, thread: result.thread });
   } catch (error) {
-    console.error("Критическая ошибка:", error);
-    return NextResponse.json({ 
-      error: "Ошибка сервера",
-      details: error instanceof Error ? error.message : String(error)
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Ошибка сервера",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    );
   }
 }
