@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import AdSlots from "@/components/ads/ad-slots";
+import { AdCarousel } from "@/components/ads/ad-carousel";
 
 export default function HomePage() {
   return (
     <div className="space-y-0 pb-8">
       <RegisterPrompt />
-      <AdSlots />
+      <AdCarousel showPlaceholder />
       <div className="citadel-container space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
@@ -294,7 +294,7 @@ function OnlineNow() {
         <span className="text-xs text-ink-muted">+334</span>
         <Badge variant="success" size="sm">127 онлайн</Badge>
       </Card>
-      <p className="text-2xs text-ink-faint text-center mt-1">Демо-данные — нужен трекер активности (см. ниже)</p>
+      <p className="text-2xs text-ink-faint text-center mt-1">Демо-данные</p>
     </section>
   );
 }
