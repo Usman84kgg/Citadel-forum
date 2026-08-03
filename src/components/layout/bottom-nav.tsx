@@ -37,11 +37,12 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-line-subtle bg-base/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)]">
-      <div className="citadel-container relative flex items-center justify-around h-14">
+      <div className="citadel-container flex items-center justify-around h-14">
         {user ? (
           <>
             <NavItem href="/" icon={HomeIcon} label="Главная" active={pathname === "/"} />
             <NavItem href="/market" icon={GridIcon} label="Маркет" active={pathname.startsWith("/market")} />
+            <CreateButton />
             <NavItem href="/profile" icon={UserIcon} label="Профиль" active={pathname.startsWith("/profile")} />
           </>
         ) : (
@@ -51,10 +52,6 @@ export function BottomNav() {
             <NavItem href="/login" icon={LoginIcon} label="Вход" active={pathname.startsWith("/login")} />
           </>
         )}
-        {/* Кнопка «+» — строго по центру панели */}
-        <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 z-50">
-          <CreateButton />
-        </div>
       </div>
     </nav>
   );
@@ -88,10 +85,10 @@ function CreateButton() {
   return (
     <Link
       href="/publish"
-      className="flex items-center justify-center shrink-0"
+      className="flex flex-1 items-center justify-center"
     >
-      <span className="flex items-center justify-center h-11 w-11 rounded-full bg-gold-400 text-black shadow-gold-strong">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <span className="flex items-center justify-center h-10 w-10 rounded-full bg-gold-400 text-black shadow-gold-strong">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
           <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
         </svg>
       </span>
