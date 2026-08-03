@@ -85,10 +85,10 @@ function CreateButton() {
   return (
     <Link
       href="/publish"
-      className="flex flex-1 items-center justify-center"
+      className="flex items-center justify-center shrink-0"
     >
-      <span className="flex items-center justify-center h-10 w-10 rounded-full bg-gold-400 text-black shadow-gold-strong">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <span className="flex items-center justify-center h-11 w-11 rounded-full bg-gold-400 text-black shadow-gold-strong">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
           <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
         </svg>
       </span>
