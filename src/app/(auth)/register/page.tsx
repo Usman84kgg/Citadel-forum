@@ -49,10 +49,12 @@ export default function RegisterPage() {
     <div className="flex min-h-[80dvh] items-center justify-center px-4">
       <Card className="w-full max-w-sm" padding="lg">
         <div className="flex flex-col items-center mb-6">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-line-strong bg-surface-2 shadow-gold mb-3">
-            <span className="font-display text-2xl font-bold text-gold-400">C</span>
-          </div>
-          <p className="font-display text-lg font-bold text-gold-400 uppercase tracking-wider2">{SITE.name}</p>
+          <img
+            src="/FBE5C086-8E99-40FA-9134-A73FC1ACE591.png"
+            alt="XALISKO GLOBAL"
+            className="h-12 w-12 rounded-xl"
+          />
+          <p className="font-display text-lg font-bold text-gold-400 uppercase tracking-wider2 mt-3">{SITE.name}</p>
           <p className="text-2xs text-ink-muted mt-1">Регистрация</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
