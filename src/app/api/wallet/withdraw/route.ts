@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
-import { walletDB } from "@/lib/wallet/mock-db";
+import { walletDB } from "@/lib/db/wallet";
 
 const SECRET = new TextEncoder().encode(
   process.env.AUTH_SECRET || "citadel-dev-secret-change-in-production",
@@ -26,18 +26,22 @@ export async function POST(request: Request) {
   if (!userId)
     return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
-  const { currency, amount, method, addressTo } = await request.json();
-  if (!currency || !amount || !method || !addressTo) {
-    return NextResponse.json({ error: "Все поля обязательны" }, { status: 400 });
-  }
+  try {
+    const { currency, amount, method, addressTo } = await request.json();
+    if (!currency || !amount || !method || !addressTo) {
+      return NextResponse.json({ error: "Все поля обязательны" }, { status: 400 });
+    }
 
-  const balance = walletDB.getBalance(userId);
-  if (balance < amount) {
-    return NextResponse.json({ error: "Недостаточно средств" }, { status: 400 });
-  }
+    const balance = await walletDB.getBalance(userId);
+    if (balance.available < amount) {
+      return NextResponse.json({ error: "Недостаточно средств" }, { status: 400 });
+    }
 
-  const withdrawal = walletDB.createWithdrawal({ userId, currency, amount, method, addressTo });
-  return NextResponse.json({ success: true, withdrawal });
+    const withdrawal = await walletDB.createWithdrawal({ userId, currency, amount, method, addressTo });
+    return NextResponse.json({ success: true, withdrawal });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || "Ошибка сервера" }, { status: 500 });
+  }
 }
 
 export async function GET(request: Request) {
@@ -45,6 +49,6 @@ export async function GET(request: Request) {
   if (!userId)
     return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
-  const withdrawals = walletDB.getWithdrawals(userId);
+  const withdrawals = await walletDB.getWithdrawals(userId);
   return NextResponse.json(withdrawals);
 }
