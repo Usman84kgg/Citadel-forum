@@ -49,7 +49,6 @@ export function BottomNav() {
         ) : (
           <>
             <NavItem href="/" icon={HomeIcon} label="Главная" active={pathname === "/"} />
-            <NavItem href="/wallet" icon={WalletIcon} label="Кошелёк" active={pathname.startsWith("/wallet")} />
             <NavItem href="/market" icon={GridIcon} label="Маркет" active={pathname.startsWith("/market")} />
             <NavItem href="/login" icon={LoginIcon} label="Вход" active={pathname.startsWith("/login")} />
           </>
