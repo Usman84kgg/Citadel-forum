@@ -41,6 +41,7 @@ export function BottomNav() {
         {user ? (
           <>
             <NavItem href="/" icon={HomeIcon} label="Главная" active={pathname === "/"} />
+            <NavItem href="/wallet" icon={WalletIcon} label="Кошелёк" active={pathname.startsWith("/wallet")} />
             <NavItem href="/market" icon={GridIcon} label="Маркет" active={pathname.startsWith("/market")} />
             <CreateButton />
             <NavItem href="/profile" icon={UserIcon} label="Профиль" active={pathname.startsWith("/profile")} />
@@ -48,6 +49,7 @@ export function BottomNav() {
         ) : (
           <>
             <NavItem href="/" icon={HomeIcon} label="Главная" active={pathname === "/"} />
+            <NavItem href="/wallet" icon={WalletIcon} label="Кошелёк" active={pathname.startsWith("/wallet")} />
             <NavItem href="/market" icon={GridIcon} label="Маркет" active={pathname.startsWith("/market")} />
             <NavItem href="/login" icon={LoginIcon} label="Вход" active={pathname.startsWith("/login")} />
           </>
@@ -104,6 +106,25 @@ function HomeIcon({ active }: { active: boolean }) {
         stroke="currentColor"
         strokeWidth={active ? 2 : 1.6}
       />
+    </svg>
+  );
+}
+
+function WalletIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M3 7C3 5.9 3.9 5 5 5H19C20.1 5 21 5.9 21 7V17C21 18.1 20.1 19 19 19H5C3.9 19 3 18.1 3 17V7Z"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+      />
+      <path
+        d="M21 10H17C15.9 10 15 10.9 15 12C15 13.1 15.9 14 17 14H21"
+        stroke="currentColor"
+        strokeWidth={active ? 2 : 1.6}
+        strokeLinecap="round"
+      />
+      <circle cx="17" cy="12" r="1.2" fill="currentColor" />
     </svg>
   );
 }
