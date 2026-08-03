@@ -61,8 +61,8 @@ export function Header() {
 
           <Link href="/" className="flex items-center gap-2">
             <img
-              src="/708EF42A-E02E-487F-91D5-F03B44F921D8.png"
-              alt="CITADEL"
+              src="/FBE5C086-8E99-40FA-9134-A73FC1ACE591.png"
+              alt="XALISKO GLOBAL"
               className="h-9 w-9 rounded-lg"
             />
           </Link>
