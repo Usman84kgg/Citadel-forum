@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Cinzel, Manrope } from "next/font/google";
 import { SITE } from "@/lib/config/site";
 import { Header } from "@/components/layout/header";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import "@/styles/tokens.css";
 import "./globals.css";
 
@@ -26,7 +27,7 @@ export const viewport: Viewport = { themeColor: "#0A0A0B", colorScheme: "dark", 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ru" className={`${cinzel.variable} ${manrope.variable} dark`} suppressHydrationWarning>
-      <body className="min-h-dvh bg-base font-ui text-ink antialiased">
+      <body className="min-h-dvh bg-base font-ui text-ink antialiased pb-24">
         <Header />
         <main>{children}</main>
         <footer className="border-t border-line-subtle py-4 mt-8">
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             © {new Date().getFullYear()} {SITE.name}. Все права защищены.
           </div>
         </footer>
+        <BottomNav />
       </body>
     </html>
   );
