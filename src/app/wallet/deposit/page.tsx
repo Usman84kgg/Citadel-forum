@@ -27,12 +27,11 @@ export default function DepositPage() {
   useEffect(() => {
     fetch("/api/wallet/addresses")
       .then((r) => r.json())
-      .then(setAddresses)
-      .catch(() => {});
+      .then(setAddresses);
   }, []);
 
   const activeAddress = addresses.find(
-    (a) => a.currency === selectedCurrency && a.isActive
+    (a) => a.currency === selectedCurrency && a.isActive,
   );
 
   async function handleSubmit(e: React.FormEvent) {
@@ -90,9 +89,7 @@ export default function DepositPage() {
             key={cur}
             onClick={() => setSelectedCurrency(cur)}
             className={`px-4 py-2 rounded-control text-sm font-medium transition-colors ${
-              selectedCurrency === cur
-                ? "bg-gold-500 text-black"
-                : "bg-surface text-ink-muted hover:bg-surface-2"
+              selectedCurrency === cur ? "bg-gold-500 text-black" : "bg-surface text-ink-muted hover:bg-surface-2"
             }`}
           >
             {cur === "USDT" ? "USDT (TRC20)" : "Bitcoin"}
@@ -105,11 +102,7 @@ export default function DepositPage() {
           <p className="text-xs text-ink-muted mb-1">Адрес для пополнения</p>
           <div className="flex items-center gap-2">
             <!--CODEPH:0-->
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => navigator.clipboard.writeText(activeAddress.address)}
-            >
+            <Button size="sm" variant="ghost" onClick={() => navigator.clipboard.writeText(activeAddress.address)}>
               📋
             </Button>
           </div>
@@ -127,27 +120,10 @@ export default function DepositPage() {
 
       <Card padding="lg">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Сумма (USD)"
-            type="number"
-            step="0.01"
-            min="10"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="Минимум $10"
-            required
-          />
-          <Input
-            label="TXID транзакции"
-            value={txId}
-            onChange={(e) => setTxId(e.target.value)}
-            placeholder="ID транзакции из блокчейна"
-            required
-          />
+          <Input label="Сумма (USD)" type="number" step="0.01" min="10" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Минимум $10" required />
+          <Input label="TXID транзакции" value={txId} onChange={(e) => setTxId(e.target.value)} placeholder="ID транзакции из блокчейна" required />
           {error ? <p className="text-xs text-danger">{error}</p> : null}
-          <Button type="submit" loading={loading} className="w-full">
-            Отправить заявку
-          </Button>
+          <Button type="submit" loading={loading} className="w-full">Отправить заявку</Button>
         </form>
       </Card>
     </div>
