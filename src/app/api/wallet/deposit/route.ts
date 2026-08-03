@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
-import { walletDB } from "@/lib/wallet/mock-db";
+import { walletDB } from "@/lib/db/wallet";
 
 const SECRET = new TextEncoder().encode(
   process.env.AUTH_SECRET || "citadel-dev-secret-change-in-production",
@@ -26,13 +26,17 @@ export async function POST(request: Request) {
   if (!userId)
     return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
-  const { currency, amount, method, txId } = await request.json();
-  if (!currency || !amount || !method) {
-    return NextResponse.json({ error: "Валюта, сумма и способ обязательны" }, { status: 400 });
-  }
+  try {
+    const { currency, amount, method, txId } = await request.json();
+    if (!currency || !amount || !method) {
+      return NextResponse.json({ error: "Валюта, сумма и способ обязательны" }, { status: 400 });
+    }
 
-  const deposit = walletDB.createDeposit({ userId, currency, amount, method, txId });
-  return NextResponse.json({ success: true, deposit });
+    const deposit = await walletDB.createDeposit({ userId, currency, amount, method, txId });
+    return NextResponse.json({ success: true, deposit });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || "Ошибка сервера" }, { status: 500 });
+  }
 }
 
 export async function GET(request: Request) {
@@ -40,6 +44,6 @@ export async function GET(request: Request) {
   if (!userId)
     return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
-  const deposits = walletDB.getDeposits(userId);
+  const deposits = await walletDB.getDeposits(userId);
   return NextResponse.json(deposits);
 }
