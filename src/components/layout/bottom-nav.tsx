@@ -32,18 +32,17 @@ export function BottomNav() {
   const authReady = user !== UNKNOWN;
 
   if (!authReady) {
-    return <div className="h-14" />;
+    return <div className="h-14 pb-[env(safe-area-inset-bottom)]" />;
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-line-subtle bg-base/95 backdrop-blur-md">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-line-subtle bg-base/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)]">
       <div className="citadel-container flex items-center justify-around h-14">
         {user ? (
           <>
             <NavItem href="/" icon={HomeIcon} label="Главная" active={pathname === "/"} />
-            <NavItem href="/market" icon={GridIcon} label="Каталог" active={pathname.startsWith("/market")} />
+            <NavItem href="/market" icon={GridIcon} label="Маркет" active={pathname.startsWith("/market")} />
             <CreateButton />
-            <NavItem href="/chat" icon={ChatIcon} label="Чат" active={pathname.startsWith("/chat")} />
             <NavItem href="/profile" icon={UserIcon} label="Профиль" active={pathname.startsWith("/profile")} />
           </>
         ) : (
@@ -116,19 +115,6 @@ function GridIcon({ active }: { active: boolean }) {
       <rect x="13" y="4" width="7" height="7" rx="1.2" stroke="currentColor" strokeWidth={active ? 2 : 1.6} />
       <rect x="4" y="13" width="7" height="7" rx="1.2" stroke="currentColor" strokeWidth={active ? 2 : 1.6} />
       <rect x="13" y="13" width="7" height="7" rx="1.2" stroke="currentColor" strokeWidth={active ? 2 : 1.6} />
-    </svg>
-  );
-}
-
-function ChatIcon({ active }: { active: boolean }) {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M4 5H20V16H9L5 19.5V16H4V5Z"
-        stroke="currentColor"
-        strokeWidth={active ? 2 : 1.6}
-        strokeLinejoin="round"
-      />
     </svg>
   );
 }
