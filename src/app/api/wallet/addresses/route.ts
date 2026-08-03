@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { walletDB } from "@/lib/db/wallet";
+import { walletDB } from "@/lib/wallet/mock-db";
 
 export async function GET() {
-  const addresses = await walletDB.getAddresses();
+  const addresses = walletDB.getActiveAddresses();
   return NextResponse.json(addresses);
 }
