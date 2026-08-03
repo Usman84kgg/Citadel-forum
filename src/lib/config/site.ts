@@ -1,7 +1,7 @@
 export const SITE = {
-  name: "CITADEL",
-  tagline: "PRIVATE COMMUNITY",
-  title: "CITADEL — Private Community",
+  name: "XALISKO GLOBAL",
+  tagline: "",
+  title: "XALISKO GLOBAL",
   description:
     "Приватное сообщество для общения, безопасных сделок и размещения услуг в одном месте.",
   descriptionEn:
