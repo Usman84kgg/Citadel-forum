@@ -80,74 +80,158 @@ export default function AdminPage() {
 
 // ==========================================================
 function DepositsTab({ items, onRefresh }: { items: DepositItem[]; onRefresh: () => void }) {
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
   async function confirm(id: string) {
-    await fetch("/api/admin/deposits", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action: "confirm" }) });
+    setBusyId(id);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/deposits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "confirm" }),
+      });
+      const data = await res.json();
+      if (!res.ok) setError(data.error || "Ошибка");
+    } catch {
+      setError("Сетевая ошибка");
+    }
+    setBusyId(null);
     onRefresh();
   }
 
   if (items.length === 0) return <Card padding="md"><p className="text-sm text-ink-muted text-center">Нет заявок на пополнение</p></Card>;
 
   return (
-    <Card padding="none">
-      {items.map((d) => (
-        <div key={d.id} className="flex items-center gap-3 px-4 py-3 border-b border-line-subtle last:border-0">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-ink">{d.userId}</p>
-            <p className="text-2xs text-ink-muted">{d.method} · TXID: {d.txId?.slice(0, 16)}... · {(d.amount / 100).toFixed(2)} USD</p>
+    <div className="space-y-2">
+      {error && <p className="text-xs text-danger">{error}</p>}
+      <Card padding="none">
+        {items.map((d) => (
+          <div key={d.id} className="flex items-center gap-3 px-4 py-3 border-b border-line-subtle last:border-0">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-ink">{d.userId || "—"}</p>
+              <p className="text-2xs text-ink-muted">
+                {d.method || "—"} · TXID: {d.txId ? d.txId.slice(0, 16) + "..." : "нет"} · {d.amount != null ? (d.amount / 100).toFixed(2) : "0.00"} USD
+              </p>
+            </div>
+            <Badge variant="warning" size="sm">Ожидает</Badge>
+            <Button size="sm" disabled={busyId === d.id} onClick={() => confirm(d.id)}>
+              {busyId === d.id ? "..." : "Подтвердить"}
+            </Button>
           </div>
-          <Badge variant="warning" size="sm">Ожидает</Badge>
-          <Button size="sm" onClick={() => confirm(d.id)}>Подтвердить</Button>
-        </div>
-      ))}
-    </Card>
+        ))}
+      </Card>
+    </div>
   );
 }
 
 // ==========================================================
 function WithdrawalsTab({ items, onRefresh }: { items: WithdrawalItem[]; onRefresh: () => void }) {
   const [txIdInputs, setTxIdInputs] = useState<Record<string, string>>({});
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
   async function approve(id: string) {
-    await fetch("/api/admin/withdrawals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action: "approve" }) });
+    setBusyId(id);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/withdrawals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "approve" }),
+      });
+      const data = await res.json();
+      if (!res.ok) setError(data.error || "Ошибка");
+    } catch {
+      setError("Сетевая ошибка");
+    }
+    setBusyId(null);
     onRefresh();
   }
+
   async function markPaid(id: string) {
-    await fetch("/api/admin/withdrawals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action: "paid", txId: txIdInputs[id] || "" }) });
+    setBusyId(id);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/withdrawals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "paid", txId: txIdInputs[id] || "" }),
+      });
+      const data = await res.json();
+      if (!res.ok) setError(data.error || "Ошибка");
+    } catch {
+      setError("Сетевая ошибка");
+    }
+    setBusyId(null);
     onRefresh();
   }
+
   async function reject(id: string) {
-    await fetch("/api/admin/withdrawals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action: "reject" }) });
+    setBusyId(id);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/withdrawals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "reject" }),
+      });
+      const data = await res.json();
+      if (!res.ok) setError(data.error || "Ошибка");
+    } catch {
+      setError("Сетевая ошибка");
+    }
+    setBusyId(null);
     onRefresh();
   }
 
   if (items.length === 0) return <Card padding="md"><p className="text-sm text-ink-muted text-center">Нет заявок на вывод</p></Card>;
 
   return (
-    <Card padding="none">
-      {items.map((w) => (
-        <div key={w.id} className="px-4 py-3 border-b border-line-subtle last:border-0 space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-ink">{w.userId}</p>
-              <p className="text-2xs text-ink-muted">{w.method} · {w.addressTo.slice(0, 12)}... · {(w.amount / 100).toFixed(2)} USD</p>
+    <div className="space-y-2">
+      {error && <p className="text-xs text-danger">{error}</p>}
+      <Card padding="none">
+        {items.map((w) => (
+          <div key={w.id} className="px-4 py-3 border-b border-line-subtle last:border-0 space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-ink">{w.userId || "—"}</p>
+                <p className="text-2xs text-ink-muted">
+                  {w.method || "—"} · {w.addressTo ? w.addressTo.slice(0, 12) + "..." : "адрес не указан"} · {w.amount != null ? (w.amount / 100).toFixed(2) : "0.00"} USD
+                </p>
+              </div>
+              <Badge variant={w.status === "approved" ? "info" : "warning"} size="sm">
+                {w.status === "approved" ? "Одобрено" : "Ожидает"}
+              </Badge>
             </div>
-            <Badge variant={w.status === "approved" ? "info" : "warning"} size="sm">
-              {w.status === "approved" ? "Одобрено" : "Ожидает"}
-            </Badge>
+            <div className="flex items-center gap-2">
+              {w.status === "pending" && (
+                <Button size="sm" disabled={busyId === w.id} onClick={() => approve(w.id)}>
+                  {busyId === w.id ? "..." : "Одобрить"}
+                </Button>
+              )}
+              {w.status === "approved" && (
+                <>
+                  <Input
+                    placeholder="TXID выплаты"
+                    value={txIdInputs[w.id] || ""}
+                    onChange={(e) => setTxIdInputs((prev) => ({ ...prev, [w.id]: e.target.value }))}
+                    className="h-8 text-xs"
+                  />
+                  <Button size="sm" disabled={busyId === w.id} onClick={() => markPaid(w.id)}>
+                    {busyId === w.id ? "..." : "Выплачено"}
+                  </Button>
+                </>
+              )}
+              <Button variant="danger" size="sm" disabled={busyId === w.id} onClick={() => reject(w.id)}>
+                Отклонить
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            {w.status === "pending" && <Button size="sm" onClick={() => approve(w.id)}>Одобрить</Button>}
-            {w.status === "approved" && (
-              <>
-                <Input placeholder="TXID выплаты" value={txIdInputs[w.id] || ""} onChange={(e) => setTxIdInputs((prev) => ({ ...prev, [w.id]: e.target.value }))} className="h-8 text-xs" />
-                <Button size="sm" onClick={() => markPaid(w.id)}>Выплачено</Button>
-              </>
-            )}
-            <Button variant="danger" size="sm" onClick={() => reject(w.id)}>Отклонить</Button>
-          </div>
-        </div>
-      ))}
-    </Card>
+        ))}
+      </Card>
+    </div>
   );
 }
 
@@ -157,14 +241,23 @@ function ManualTab() {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [result, setResult] = useState("");
+  const [busy, setBusy] = useState(false);
 
   async function doAction(action: string) {
-    const res = await fetch("/api/admin/manual", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, amount: Math.round(parseFloat(amount) * 100), action, note }),
-    });
-    const data = await res.json();
-    setResult(data.success ? "Готово" : data.error || "Ошибка");
+    setBusy(true);
+    setResult("");
+    try {
+      const res = await fetch("/api/admin/manual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, amount: Math.round(parseFloat(amount) * 100), action, note }),
+      });
+      const data = await res.json();
+      setResult(data.success ? "Готово" : data.error || "Ошибка");
+    } catch {
+      setResult("Сетевая ошибка");
+    }
+    setBusy(false);
   }
 
   return (
@@ -173,10 +266,10 @@ function ManualTab() {
       <Input label="Сумма (USD)" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
       <Input label="Примечание" value={note} onChange={(e) => setNote(e.target.value)} />
       <div className="flex gap-2 flex-wrap">
-        <Button size="sm" onClick={() => doAction("credit")}>Зачислить</Button>
-        <Button size="sm" variant="danger" onClick={() => doAction("debit")}>Списать</Button>
-        <Button size="sm" variant="secondary" onClick={() => doAction("freeze")}>Заморозить</Button>
-        <Button size="sm" variant="secondary" onClick={() => doAction("unfreeze")}>Разморозить</Button>
+        <Button size="sm" disabled={busy} onClick={() => doAction("credit")}>Зачислить</Button>
+        <Button size="sm" variant="danger" disabled={busy} onClick={() => doAction("debit")}>Списать</Button>
+        <Button size="sm" variant="secondary" disabled={busy} onClick={() => doAction("freeze")}>Заморозить</Button>
+        <Button size="sm" variant="secondary" disabled={busy} onClick={() => doAction("unfreeze")}>Разморозить</Button>
       </div>
       {result ? <p className="text-sm text-gold-300">{result}</p> : null}
     </Card>
