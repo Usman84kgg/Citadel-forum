@@ -13,7 +13,6 @@ export const walletDB = {
     return { available, hold, total: available + hold, currency: "USD" };
   },
 
-  // Только активные — для страницы пополнения
   async getAddresses() {
     const { data } = await supabase
       .from("payment_addresses")
@@ -30,7 +29,6 @@ export const walletDB = {
     }));
   },
 
-  // Все адреса — для админки
   async getAllAddresses() {
     const { data } = await supabase
       .from("payment_addresses")
@@ -102,7 +100,7 @@ export const walletDB = {
       .from("deposits")
       .insert({
         user_id: params.userId,
-        currency_id: params.currency === "BTC" ? "BTC" : "USDT",
+        currency: params.currency,
         amount: params.amount,
         method: params.method,
         tx_id: params.txId || null,
@@ -135,7 +133,7 @@ export const walletDB = {
       .from("withdrawals")
       .insert({
         user_id: params.userId,
-        currency_id: params.currency === "BTC" ? "BTC" : "USDT",
+        currency: params.currency,
         amount: params.amount,
         method: params.method,
         address_to: params.addressTo,
@@ -195,7 +193,6 @@ export const walletDB = {
     } else {
       await supabase.from("accounts").insert({
         user_id: deposit.user_id,
-        currency_id: "USD",
         type: "available",
         balance: deposit.amount,
       });
@@ -220,17 +217,10 @@ export const walletDB = {
         .update({ status: "approved" })
         .eq("id", withdrawalId);
     } else if (action === "complete") {
-      const { data: w } = await supabase
+      await supabase
         .from("withdrawals")
-        .select("*")
-        .eq("id", withdrawalId)
-        .single();
-      if (w) {
-        await supabase
-          .from("withdrawals")
-          .update({ status: "completed", tx_id: txId || null })
-          .eq("id", withdrawalId);
-      }
+        .update({ status: "completed", tx_id: txId || null })
+        .eq("id", withdrawalId);
     } else if (action === "reject") {
       const { data: w } = await supabase
         .from("withdrawals")
@@ -242,7 +232,6 @@ export const walletDB = {
           .from("withdrawals")
           .update({ status: "rejected" })
           .eq("id", withdrawalId);
-        // Возврат средств
         const { data: account } = await supabase
           .from("accounts")
           .select("id, balance")
@@ -276,7 +265,6 @@ export const walletDB = {
     } else {
       await supabase.from("accounts").insert({
         user_id: userId,
-        currency_id: "USD",
         type: "available",
         balance: amount,
       });
