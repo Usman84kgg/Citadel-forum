@@ -1,4 +1,4 @@
-import { Bolt Database } from "./supabase";
+   import { Bolt, Database } from "./supabase";
 
 export const walletDB = {
   async getBalance(userId: string) {
