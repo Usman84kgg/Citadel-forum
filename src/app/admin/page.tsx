@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface DepositItem { id: string; userId: string; currency: string; amount: number; method: string; txId?: string; status: string; createdAt: string; }
 interface WithdrawalItem { id: string; userId: string; currency: string; amount: number; method: string; addressTo: string; status: string; createdAt: string; }
-interface AddressItem { currency: string; network: string; address: string; label: string; isActive: boolean; }
+interface AddressItem { id: string; currency: string; network: string; address: string; label: string; isActive: boolean; }
 interface AdItem {
   id: string;
   title: string;
@@ -184,56 +184,189 @@ function ManualTab() {
 }
 
 // ==========================================================
-function AddressesTab({ items, onRefresh }: { items: AddressItem[]; onRefresh: () => void }) {
-  const [currency, setCurrency] = useState("BTC");
-  const [network, setNetwork] = useState("BTC");
+function AddressesTab({
+  items,
+  onRefresh,
+}: {
+  items: AddressItem[];
+  onRefresh: () => void;
+}) {
+  const [showForm, setShowForm] = useState(false);
+  const [currency, setCurrency] = useState("USDT");
+  const [network, setNetwork] = useState("TRC20");
   const [address, setAddress] = useState("");
   const [label, setLabel] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  async function save() {
-    await fetch("/api/admin/addresses", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currency, network, address, label }),
+  async function create() {
+    if (!address) { setError("Введите адрес"); return; }
+    setSaving(true);
+    setError("");
+    const res = await fetch("/api/admin/addresses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "create", currency, network, address, label }),
     });
-    onRefresh();
-    setAddress(""); setLabel("");
+    setSaving(false);
+    if (res.ok) {
+      setAddress("");
+      setLabel("");
+      setShowForm(false);
+      onRefresh();
+    } else {
+      const d = await res.json();
+      setError(d.error || "Ошибка");
+    }
   }
 
-  async function toggle(currency: string, network: string, isActive: boolean) {
+  async function toggle(id: string, current: boolean) {
     await fetch("/api/admin/addresses", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currency, network, isActive: !isActive }),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "toggle", id, isActive: !current }),
     });
     onRefresh();
   }
+
+  async function remove(id: string) {
+    if (!confirm("Удалить адрес?")) return;
+    await fetch("/api/admin/addresses", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    onRefresh();
+  }
+
+  const qrUrl = (addr: string) =>
+    `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(addr)}&bgcolor=ffffff&color=000000&margin=6`;
 
   return (
-    <div className="space-y-4 max-w-md">
-      {items.map((a) => (
-        <Card key={`${a.currency}-${a.network}`} padding="md" className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-ink">{a.label} ({a.currency} {a.network})</p>
-            <p className="text-xs text-ink-muted break-all">{a.address}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={a.isActive ? "success" : "muted"} size="sm">{a.isActive ? "Активен" : "Отключён"}</Badge>
-            <Button size="sm" variant="ghost" onClick={() => toggle(a.currency, a.network, a.isActive)}>
-              {a.isActive ? "Откл." : "Вкл."}
-            </Button>
-          </div>
-        </Card>
-      ))}
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <p className="text-sm text-ink-muted">
+          Адреса для пополнения ({items.length})
+        </p>
+        <Button size="sm" onClick={() => setShowForm((v) => !v)}>
+          {showForm ? "Отмена" : "Добавить адрес"}
+        </Button>
+      </div>
 
-      <Card padding="lg" className="space-y-3">
-        <p className="text-sm font-semibold text-ink">Добавить / изменить адрес</p>
-        <select value={currency} onChange={(e) => { setCurrency(e.target.value); setNetwork(e.target.value === "USDT" ? "TRC20" : "BTC"); }} className="bg-surface border border-line-subtle rounded-control px-3 py-2 text-sm text-ink">
-          <option value="BTC">BTC</option>
-          <option value="USDT">USDT (TRC20)</option>
-        </select>
-        <Input label="Адрес" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="bc1q... или TX..." />
-        <Input label="Метка" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Основной BTC" />
-        <Button size="sm" onClick={save}>Сохранить</Button>
-      </Card>
+      {showForm && (
+        <Card padding="lg" className="space-y-3">
+          <p className="text-sm font-semibold text-ink">Новый адрес</p>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-2xs text-ink-muted mb-1 block">Валюта</label>
+              <select
+                value={currency}
+                onChange={(e) => {
+                  setCurrency(e.target.value);
+                  setNetwork(e.target.value === "BTC" ? "Bitcoin" : e.target.value === "ETH" ? "ERC20" : e.target.value === "TON" ? "TON" : "TRC20");
+                }}
+                className="w-full rounded-control bg-surface border border-line-subtle px-3 py-2 text-sm text-ink focus:outline-none focus:border-gold-400"
+              >
+                <option value="USDT">USDT</option>
+                <option value="BTC">BTC</option>
+                <option value="ETH">ETH</option>
+                <option value="TON">TON</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-2xs text-ink-muted mb-1 block">Сеть</label>
+              <input
+                value={network}
+                onChange={(e) => setNetwork(e.target.value)}
+                placeholder="TRC20, ERC20, Bitcoin..."
+                className="w-full rounded-control bg-surface border border-line-subtle px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold-400"
+              />
+            </div>
+          </div>
+
+          <Input
+            label="Адрес кошелька"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Вставьте адрес..."
+          />
+
+          <Input
+            label="Метка (необязательно)"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="Например: Основной USDT"
+          />
+
+          {address.length > 10 && (
+            <div className="flex flex-col items-center gap-2 py-2">
+              <p className="text-2xs text-ink-muted">QR-код (превью)</p>
+              <img
+                src={qrUrl(address)}
+                alt="QR-код"
+                className="rounded-lg border border-line-subtle"
+                width={140}
+                height={140}
+              />
+            </div>
+          )}
+
+          {error && <p className="text-xs text-danger">{error}</p>}
+
+          <Button size="sm" disabled={saving} onClick={create} className="w-full">
+            {saving ? "Сохранение..." : "Сохранить адрес"}
+          </Button>
+        </Card>
+      )}
+
+      {items.length === 0 ? (
+        <Card padding="md">
+          <p className="text-sm text-ink-muted text-center">
+            Адреса не добавлены. Нажмите «Добавить адрес».
+          </p>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {items.map((a) => (
+            <Card key={a.id} padding="md">
+              <div className="flex gap-4 items-start">
+                <div className="shrink-0">
+                  <img
+                    src={qrUrl(a.address)}
+                    alt="QR"
+                    width={100}
+                    height={100}
+                    className="rounded-lg border border-line-subtle bg-white"
+                  />
+                </div>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-ink">{a.currency}</span>
+                    <span className="text-2xs text-ink-muted bg-surface-2 px-2 py-0.5 rounded-full">{a.network}</span>
+                    {a.label && <span className="text-2xs text-ink-faint">{a.label}</span>}
+                    <Badge variant={a.isActive ? "success" : "muted"} size="sm">
+                      {a.isActive ? "Активен" : "Выключен"}
+                    </Badge>
+                  </div>
+                  <p className="text-xs font-mono text-ink break-all">{a.address}</p>
+                  <div className="flex gap-1 pt-1 flex-wrap">
+                    <Button size="sm" variant="ghost" type="button" onClick={() => navigator.clipboard.writeText(a.address)}>
+                      Скопировать
+                    </Button>
+                    <Button size="sm" variant={a.isActive ? "secondary" : "ghost"} type="button" onClick={() => toggle(a.id, a.isActive)}>
+                      {a.isActive ? "Выключить" : "Включить"}
+                    </Button>
+                    <Button size="sm" variant="danger" type="button" onClick={() => remove(a.id)}>
+                      Удалить
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -333,8 +466,6 @@ function BadgesTab() {
 }
 
 // ==========================================================
-// РЕКЛАМА — теперь один общий слот "banner"
-// ==========================================================
 function AdsTab() {
   const [ads, setAds] = useState<AdItem[]>([]);
   const [title, setTitle] = useState("");
@@ -356,24 +487,14 @@ function AdsTab() {
 
   async function create() {
     setErrorMsg("");
-
-    if (!title.trim()) {
-      setErrorMsg("Введите название");
-      return;
-    }
-    if (!textContent.trim() && !mediaUrl.trim()) {
-      setErrorMsg("Введите текст или ссылку на медиа");
-      return;
-    }
-
+    if (!title.trim()) { setErrorMsg("Введите название"); return; }
+    if (!textContent.trim() && !mediaUrl.trim()) { setErrorMsg("Введите текст или ссылку на медиа"); return; }
     try {
       const res = await fetch("/api/admin/ads", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, slot, mediaUrl, mediaType, textContent, linkUrl, priority: parseInt(priority) }),
       });
-
       const data = await res.json();
-
       if (res.ok) {
         setTitle(""); setMediaUrl(""); setTextContent(""); setLinkUrl("");
         refresh();
@@ -412,7 +533,7 @@ function AdsTab() {
 
         {errorMsg && (
           <div className="p-3 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-400">
-            ❌ {errorMsg}
+            {errorMsg}
           </div>
         )}
 
