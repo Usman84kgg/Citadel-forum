@@ -13,12 +13,82 @@ export const walletDB = {
     return { available, hold, total: available + hold, currency: "USD" };
   },
 
+  // Только активные — для страницы пополнения
   async getAddresses() {
     const { data } = await supabase
       .from("payment_addresses")
       .select("*")
-      .eq("is_active", true);
-    return data || [];
+      .eq("is_active", true)
+      .order("created_at", { ascending: true });
+    return (data || []).map((a: any) => ({
+      id: a.id,
+      currency: a.currency,
+      network: a.network,
+      address: a.address,
+      label: a.label,
+      isActive: a.is_active,
+    }));
+  },
+
+  // Все адреса — для админки
+  async getAllAddresses() {
+    const { data } = await supabase
+      .from("payment_addresses")
+      .select("*")
+      .order("created_at", { ascending: true });
+    return (data || []).map((a: any) => ({
+      id: a.id,
+      currency: a.currency,
+      network: a.network,
+      address: a.address,
+      label: a.label,
+      isActive: a.is_active,
+    }));
+  },
+
+  async createAddress(params: {
+    currency: string;
+    network: string;
+    address: string;
+    label: string;
+  }) {
+    const { data, error } = await supabase
+      .from("payment_addresses")
+      .insert({
+        currency: params.currency,
+        network: params.network,
+        address: params.address,
+        label: params.label,
+        is_active: true,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateAddress(id: string, params: { address: string; label: string }) {
+    const { error } = await supabase
+      .from("payment_addresses")
+      .update({ address: params.address, label: params.label })
+      .eq("id", id);
+    if (error) throw error;
+  },
+
+  async toggleAddress(id: string, isActive: boolean) {
+    const { error } = await supabase
+      .from("payment_addresses")
+      .update({ is_active: isActive })
+      .eq("id", id);
+    if (error) throw error;
+  },
+
+  async deleteAddress(id: string) {
+    const { error } = await supabase
+      .from("payment_addresses")
+      .delete()
+      .eq("id", id);
+    if (error) throw error;
   },
 
   async createDeposit(params: {
@@ -87,7 +157,6 @@ export const walletDB = {
     return data || [];
   },
 
-  // Админские методы
   async getPendingDeposits() {
     const { data } = await supabase
       .from("deposits")
@@ -98,7 +167,6 @@ export const walletDB = {
   },
 
   async confirmDeposit(depositId: string) {
-    // Получаем депозит
     const { data: deposit } = await supabase
       .from("deposits")
       .select("*")
@@ -107,10 +175,11 @@ export const walletDB = {
 
     if (!deposit) return null;
 
-    // Обновляем статус
-    await supabase.from("deposits").update({ status: "confirmed" }).eq("id", depositId);
+    await supabase
+      .from("deposits")
+      .update({ status: "confirmed" })
+      .eq("id", depositId);
 
-    // Зачисляем на баланс
     const { data: account } = await supabase
       .from("accounts")
       .select("id, balance")
@@ -146,73 +215,49 @@ export const walletDB = {
 
   async processWithdrawal(withdrawalId: string, action: string, txId?: string) {
     if (action === "approve") {
-      await supabase.from("withdrawals").update({ status: "approved" }).eq("id", withdrawalId);
-      return;
-    }
-
-    if (action === "paid") {
-      const { data: withdrawal } = await supabase
+      await supabase
+        .from("withdrawals")
+        .update({ status: "approved" })
+        .eq("id", withdrawalId);
+    } else if (action === "complete") {
+      const { data: w } = await supabase
         .from("withdrawals")
         .select("*")
         .eq("id", withdrawalId)
         .single();
-
-      if (!withdrawal) return;
-
-      await supabase
-        .from("withdrawals")
-        .update({ status: "paid", tx_id: txId || null })
-        .eq("id", withdrawalId);
-
-      // Списываем с баланса
-      const { data: account } = await supabase
-        .from("accounts")
-        .select("id, balance")
-        .eq("user_id", withdrawal.user_id)
-        .eq("type", "available")
-        .single();
-
-      if (account) {
+      if (w) {
         await supabase
+          .from("withdrawals")
+          .update({ status: "completed", tx_id: txId || null })
+          .eq("id", withdrawalId);
+      }
+    } else if (action === "reject") {
+      const { data: w } = await supabase
+        .from("withdrawals")
+        .select("*")
+        .eq("id", withdrawalId)
+        .single();
+      if (w) {
+        await supabase
+          .from("withdrawals")
+          .update({ status: "rejected" })
+          .eq("id", withdrawalId);
+        // Возврат средств
+        const { data: account } = await supabase
           .from("accounts")
-          .update({ balance: Math.max(0, account.balance - withdrawal.amount) })
-          .eq("id", account.id);
+          .select("id, balance")
+          .eq("user_id", w.user_id)
+          .eq("type", "available")
+          .single();
+        if (account) {
+          await supabase
+            .from("accounts")
+            .update({ balance: account.balance + w.amount })
+            .eq("id", account.id);
+        }
       }
     }
-
-    if (action === "reject") {
-      await supabase.from("withdrawals").update({ status: "rejected" }).eq("id", withdrawalId);
-    }
-  },
-
-  async updateAddress(currency: string, network: string, address: string, label: string) {
-    const { data: existing } = await supabase
-      .from("payment_addresses")
-      .select("id")
-      .eq("currency_id", currency)
-      .eq("network", network)
-      .single();
-
-    if (existing) {
-      await supabase.from("payment_addresses").update({ address, label }).eq("id", existing.id);
-    } else {
-      await supabase.from("payment_addresses").insert({
-        currency_id: currency,
-        network,
-        address,
-        label,
-        is_active: true,
-        created_by: "admin",
-      });
-    }
-  },
-
-  async toggleAddress(currency: string, network: string, isActive: boolean) {
-    await supabase
-      .from("payment_addresses")
-      .update({ is_active: isActive })
-      .eq("currency_id", currency)
-      .eq("network", network);
+    return { success: true };
   },
 
   async manualCredit(userId: string, amount: number) {
