@@ -24,16 +24,35 @@ async function checkAdmin(req: Request) {
 export async function GET(req: Request) {
   if (!(await checkAdmin(req)))
     return NextResponse.json({ error: "Нет доступа" }, { status: 403 });
-  const d = await walletDB.getPendingWithdrawals();
-  return NextResponse.json(d);
+  try {
+    const d = await walletDB.getPendingWithdrawals();
+    return NextResponse.json(d);
+  } catch (err) {
+    console.error("getPendingWithdrawals error:", err);
+    return NextResponse.json({ error: "Ошибка загрузки выводов" }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
   if (!(await checkAdmin(req)))
     return NextResponse.json({ error: "Нет доступа" }, { status: 403 });
+
   const { id, action, txId } = await req.json();
-  if (action === "approve") await walletDB.processWithdrawal(id, "approve");
-  if (action === "paid") await walletDB.processWithdrawal(id, "complete", txId);
-  if (action === "reject") await walletDB.processWithdrawal(id, "reject");
-  return NextResponse.json({ success: true });
+
+  if (!id || !action) {
+    return NextResponse.json({ error: "Не указан id или action" }, { status: 400 });
+  }
+
+  try {
+    if (action === "approve") await walletDB.processWithdrawal(id, "approve");
+    if (action === "paid") await walletDB.processWithdrawal(id, "complete", txId);
+    if (action === "reject") await walletDB.processWithdrawal(id, "reject");
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("processWithdrawal error:", err);
+    return NextResponse.json(
+      { error: "Ошибка обработки вывода", details: String(err) },
+      { status: 500 },
+    );
+  }
 }
