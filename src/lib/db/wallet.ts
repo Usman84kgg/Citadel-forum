@@ -108,7 +108,6 @@ export const walletDB = {
       })
       .select()
       .single();
-
     if (error) throw error;
     return data;
   },
@@ -141,7 +140,6 @@ export const walletDB = {
       })
       .select()
       .single();
-
     if (error) throw error;
     return data;
   },
