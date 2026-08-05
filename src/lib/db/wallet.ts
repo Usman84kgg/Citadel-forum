@@ -1,8 +1,8 @@
-import { supabase } from "./supabase";
+import { Bolt Database } from "./supabase";
 
 export const walletDB = {
   async getBalance(userId: string) {
-    const { data } = await supabase
+    const { data } = await Bolt Database
       .from("accounts")
       .select("balance, type")
       .eq("user_id", userId);
@@ -14,7 +14,7 @@ export const walletDB = {
   },
 
   async getAddresses() {
-    const { data } = await supabase
+    const { data } = await Bolt Database
       .from("payment_addresses")
       .select("*")
       .eq("is_active", true)
@@ -30,7 +30,7 @@ export const walletDB = {
   },
 
   async getAllAddresses() {
-    const { data } = await supabase
+    const { data } = await Bolt Database
       .from("payment_addresses")
       .select("*")
       .order("created_at", { ascending: true });
@@ -50,7 +50,7 @@ export const walletDB = {
     address: string;
     label: string;
   }) {
-    const { data, error } = await supabase
+    const { data, error } = await Bolt Database
       .from("payment_addresses")
       .insert({
         currency: params.currency,
@@ -66,7 +66,7 @@ export const walletDB = {
   },
 
   async updateAddress(id: string, params: { address: string; label: string }) {
-    const { error } = await supabase
+    const { error } = await Bolt Database
       .from("payment_addresses")
       .update({ address: params.address, label: params.label })
       .eq("id", id);
@@ -74,7 +74,7 @@ export const walletDB = {
   },
 
   async toggleAddress(id: string, isActive: boolean) {
-    const { error } = await supabase
+    const { error } = await Bolt Database
       .from("payment_addresses")
       .update({ is_active: isActive })
       .eq("id", id);
@@ -82,7 +82,7 @@ export const walletDB = {
   },
 
   async deleteAddress(id: string) {
-    const { error } = await supabase
+    const { error } = await Bolt Database
       .from("payment_addresses")
       .delete()
       .eq("id", id);
@@ -96,7 +96,7 @@ export const walletDB = {
     method: string;
     txId?: string;
   }) {
-    const { data, error } = await supabase
+    const { data, error } = await Bolt Database
       .from("deposits")
       .insert({
         user_id: params.userId,
@@ -113,7 +113,7 @@ export const walletDB = {
   },
 
   async getDeposits(userId: string) {
-    const { data } = await supabase
+    const { data } = await Bolt Database
       .from("deposits")
       .select("*")
       .eq("user_id", userId)
@@ -128,7 +128,7 @@ export const walletDB = {
     method: string;
     addressTo: string;
   }) {
-    const { data, error } = await supabase
+    const { data, error } = await Bolt Database
       .from("withdrawals")
       .insert({
         user_id: params.userId,
@@ -145,7 +145,7 @@ export const walletDB = {
   },
 
   async getWithdrawals(userId: string) {
-    const { data } = await supabase
+    const { data } = await Bolt Database
       .from("withdrawals")
       .select("*")
       .eq("user_id", userId)
@@ -154,16 +154,25 @@ export const walletDB = {
   },
 
   async getPendingDeposits() {
-    const { data } = await supabase
+    const { data } = await Bolt Database
       .from("deposits")
       .select("*")
       .eq("status", "pending")
       .order("created_at", { ascending: false });
-    return data || [];
+    return (data || []).map((d: any) => ({
+      id: d.id,
+      userId: d.user_id,
+      currency: d.currency,
+      amount: d.amount,
+      method: d.method,
+      txId: d.tx_id,
+      status: d.status,
+      createdAt: d.created_at,
+    }));
   },
 
   async confirmDeposit(depositId: string) {
-    const { data: deposit } = await supabase
+    const { data: deposit } = await Bolt Database
       .from("deposits")
       .select("*")
       .eq("id", depositId)
@@ -171,12 +180,12 @@ export const walletDB = {
 
     if (!deposit) return null;
 
-    await supabase
+    await Bolt Database
       .from("deposits")
       .update({ status: "confirmed" })
       .eq("id", depositId);
 
-    const { data: account } = await supabase
+    const { data: account } = await Bolt Database
       .from("accounts")
       .select("id, balance")
       .eq("user_id", deposit.user_id)
@@ -184,7 +193,7 @@ export const walletDB = {
       .single();
 
     if (account) {
-      await supabase
+      await Bolt Database
         .from("accounts")
         .update({ balance: account.balance + deposit.amount })
         .eq("id", account.id);
@@ -200,44 +209,58 @@ export const walletDB = {
   },
 
   async getPendingWithdrawals() {
-    const { data } = await supabase
+    const { data } = await Bolt Database
       .from("withdrawals")
       .select("*")
       .in("status", ["pending", "approved"])
       .order("created_at", { ascending: false });
-    return data || [];
+    return (data || []).map((w: any) => ({
+      id: w.id,
+      userId: w.user_id,
+      currency: w.currency,
+      amount: w.amount,
+      method: w.method,
+      addressTo: w.address_to,
+      status: w.status,
+      createdAt: w.created_at,
+    }));
   },
 
   async processWithdrawal(withdrawalId: string, action: string, txId?: string) {
     if (action === "approve") {
-      await supabase
+      const { error } = await Bolt Database
         .from("withdrawals")
         .update({ status: "approved" })
         .eq("id", withdrawalId);
+      if (error) throw error;
     } else if (action === "complete") {
-      await supabase
+      const { error } = await Bolt Database
         .from("withdrawals")
         .update({ status: "completed", tx_id: txId || null })
         .eq("id", withdrawalId);
+      if (error) throw error;
     } else if (action === "reject") {
-      const { data: w } = await supabase
+      const { data: w, error: fetchErr } = await Bolt Database
         .from("withdrawals")
         .select("*")
         .eq("id", withdrawalId)
         .single();
+      if (fetchErr) throw fetchErr;
       if (w) {
-        await supabase
+        const { error: updErr } = await Bolt Database
           .from("withdrawals")
           .update({ status: "rejected" })
           .eq("id", withdrawalId);
-        const { data: account } = await supabase
+        if (updErr) throw updErr;
+
+        const { data: account } = await Bolt Database
           .from("accounts")
           .select("id, balance")
           .eq("user_id", w.user_id)
           .eq("type", "available")
           .single();
         if (account) {
-          await supabase
+          await Bolt Database
             .from("accounts")
             .update({ balance: account.balance + w.amount })
             .eq("id", account.id);
@@ -248,7 +271,7 @@ export const walletDB = {
   },
 
   async manualCredit(userId: string, amount: number) {
-    const { data: account } = await supabase
+    const { data: account } = await Bolt Database
       .from("accounts")
       .select("id, balance")
       .eq("user_id", userId)
@@ -256,7 +279,7 @@ export const walletDB = {
       .single();
 
     if (account) {
-      await supabase
+      await Bolt Database
         .from("accounts")
         .update({ balance: account.balance + amount })
         .eq("id", account.id);
@@ -272,7 +295,7 @@ export const walletDB = {
   },
 
   async manualDebit(userId: string, amount: number) {
-    const { data: account } = await supabase
+    const { data: account } = await Bolt Database
       .from("accounts")
       .select("id, balance")
       .eq("user_id", userId)
@@ -283,7 +306,7 @@ export const walletDB = {
       return { success: false, error: "Недостаточно средств" };
     }
 
-    await supabase
+    await Bolt Database
       .from("accounts")
       .update({ balance: account.balance - amount })
       .eq("id", account.id);
