@@ -34,3 +34,4 @@ export async function POST(req: Request) {
   const { id, action } = await req.json();
   if (action === "confirm") await walletDB.confirmDeposit(id);
   return NextResponse.json({ success: true });
+}
