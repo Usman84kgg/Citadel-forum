@@ -228,46 +228,81 @@ export const walletDB = {
   },
 
   async processWithdrawal(withdrawalId: string, action: string, txId?: string) {
+    // Получаем данные заявки перед обработкой
+    const { data: w, error: fetchErr } = await supabase
+      .from("withdrawals")
+      .select("*")
+      .eq("id", withdrawalId)
+      .single();
+    if (fetchErr) throw fetchErr;
+    if (!w) throw new Error("Заявка на вывод не найдена");
+
     if (action === "approve") {
+      // Просто меняем статус – при необходимости можно заблокировать средства в hold
       const { error } = await supabase
         .from("withdrawals")
         .update({ status: "approved" })
         .eq("id", withdrawalId);
       if (error) throw error;
+      // TODO: реализовать перемещение суммы из available в hold, если hold используется
     } else if (action === "complete") {
-      const { error } = await supabase
+      // Помечаем как выплачено
+      const { error: updErr } = await supabase
         .from("withdrawals")
         .update({ status: "completed", tx_id: txId || null })
         .eq("id", withdrawalId);
-      if (error) throw error;
-    } else if (action === "reject") {
-      const { data: w, error: fetchErr } = await supabase
-        .from("withdrawals")
-        .select("*")
-        .eq("id", withdrawalId)
-        .single();
-      if (fetchErr) throw fetchErr;
-      if (w) {
-        const { error: updErr } = await supabase
-          .from("withdrawals")
-          .update({ status: "rejected" })
-          .eq("id", withdrawalId);
-        if (updErr) throw updErr;
+      if (updErr) throw updErr;
 
-        const { data: account } = await supabase
-          .from("accounts")
-          .select("id, balance")
-          .eq("user_id", w.user_id)
-          .eq("type", "available")
-          .single();
-        if (account) {
-          await supabase
-            .from("accounts")
-            .update({ balance: account.balance + w.amount })
-            .eq("id", account.id);
-        }
+      // Списываем сумму с баланса пользователя (available)
+      const { data: account } = await supabase
+        .from("accounts")
+        .select("id, balance")
+        .eq("user_id", w.user_id)
+        .eq("type", "available")
+        .single();
+
+      if (!account) {
+        throw new Error("Available account not found");
       }
+      if (account.balance < w.amount) {
+        throw new Error("Недостаточно средств для выполнения вывода");
+      }
+
+      await supabase
+        .from("accounts")
+        .update({ balance: account.balance - w.amount })
+        .eq("id", account.id);
+    } else if (action === "reject") {
+      const { error: updErr } = await supabase
+        .from("withdrawals")
+        .update({ status: "rejected" })
+        .eq("id", withdrawalId);
+      if (updErr) throw updErr;
+
+      // Возвращаем сумму на баланс пользователя
+      const { data: account } = await supabase
+        .from("accounts")
+        .select("id, balance")
+        .eq("user_id", w.user_id)
+        .eq("type", "available")
+        .single();
+
+      if (account) {
+        await supabase
+          .from("accounts")
+          .update({ balance: account.balance + w.amount })
+          .eq("id", account.id);
+      } else {
+        await supabase.from("accounts").insert({
+          user_id: w.user_id,
+          type: "available",
+          balance: w.amount,
+        });
+      }
+    } else {
+      throw new Error(`Неизвестное действие: ${action}`);
     }
+
     return { success: true };
   },
 
