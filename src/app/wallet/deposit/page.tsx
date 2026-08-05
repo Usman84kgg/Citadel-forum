@@ -90,7 +90,6 @@ export default function DepositPage() {
         <Card padding="md">
           <p className="text-xs text-ink-muted mb-1">Адрес для пополнения</p>
           <div className="flex items-center gap-2">
-            <!--CODEPH:0-->
             <Button size="sm" variant="ghost" onClick={() => navigator.clipboard.writeText(activeAddress.address)}>Copy</Button>
           </div>
           <p className="text-2xs text-ink-faint mt-2">Отправьте {selectedCurrency === "USDT" ? "USDT TRC-20" : "BTC"} на этот адрес и заполните форму ниже</p>
