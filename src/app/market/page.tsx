@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { AdCarousel } from "@/components/ads/ad-carousel";
 
 interface Listing {
@@ -13,10 +12,8 @@ interface Listing {
   description: string;
   price: number;
   type: string;
-  status: string;
-  seller_id: string;
   seller_username: string | null;
-  image_url: string | null;
+  seller_avatar_url: string | null;
   view_count: number;
   created_at: string;
 }
@@ -57,7 +54,7 @@ export default function MarketPage() {
       <div className="citadel-container space-y-4">
         <div>
           <h1 className="font-display text-2xl font-bold text-ink">Маркет</h1>
-          <p className="text-sm text-ink-muted mt-1">Покупка и продажа цифровых товаров и услуг</p>
+          <p className="text-sm text-ink-muted mt-1">Покупка и продажа товаров и услуг</p>
         </div>
 
         <div className="relative">
@@ -70,7 +67,7 @@ export default function MarketPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Поиск по объявлениям..."
+            placeholder="Поиск по публикациям..."
             className="w-full rounded-control bg-surface border border-line-subtle pl-10 pr-3 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold-400"
           />
         </div>
@@ -83,7 +80,7 @@ export default function MarketPage() {
                 !activeCategory ? "bg-gold-500 text-black" : "bg-surface text-ink-muted hover:bg-surface-2"
               }`}
             >
-              Все категории
+              Все
             </button>
             {categories.map((c) => (
               <button
@@ -107,47 +104,50 @@ export default function MarketPage() {
         ) : filtered.length === 0 ? (
           <Card padding="md"><p className="text-sm text-ink-muted text-center">Объявлений пока нет</p></Card>
         ) : (
-          <div className="space-y-3">
-            {filtered.map((l, idx) => (
-              <div key={l.id}>
-                <Link href={`/market/${l.id}`}>
-                  <Card variant="interactive" padding="md" className="flex gap-3">
-                    <div className="h-20 w-20 rounded-control bg-surface-2 shrink-0 overflow-hidden">
-                      {l.image_url ? (
-                        <img src={l.image_url} alt={l.title} className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center text-ink-faint text-2xs">
-                          Нет фото
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0 flex flex-col justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-ink truncate">{l.title}</p>
-                        <Badge variant={l.type === "service" ? "info" : "warning"} size="sm" className="mt-1">
-                          {l.type === "service" ? "Услуги" : l.type === "digital" ? "Цифровой" : "Товар"}
-                        </Badge>
-                        <p className="text-xs text-ink-muted mt-1 line-clamp-2">{l.description}</p>
+          <div className="space-y-0">
+            {filtered.map((l, idx) => {
+              const initials = (l.seller_username || "?").slice(0, 2).toUpperCase();
+              return (
+                <div key={l.id}>
+                  <Link href={`/market/${l.id}`}>
+                    <div className="flex gap-3 py-3 border-b border-line-subtle hover:bg-surface-2/40 transition-colors px-1">
+                      <div className="h-10 w-10 rounded-full bg-gold-400/15 flex items-center justify-center shrink-0 text-xs text-gold-400 font-bold overflow-hidden">
+                        {l.seller_avatar_url ? (
+                          <img src={l.seller_avatar_url} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          initials
+                        )}
                       </div>
-                      {l.seller_username ? (
-                        <p className="text-2xs text-ink-faint mt-1">{l.seller_username}</p>
-                      ) : null}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-ink truncate">{l.title}</p>
+                        <p className="text-xs text-ink-muted mt-0.5 line-clamp-2">{l.description}</p>
+                        <div className="flex items-center gap-2 mt-1.5 text-2xs text-ink-faint">
+                          <span>{l.seller_username || "Продавец"}</span>
+                          <span>·</span>
+                          <span>{new Date(l.created_at).toLocaleDateString("ru-RU")}</span>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right flex flex-col items-end justify-between">
+                        <span className="text-sm font-bold text-gold-400">${((l.price || 0) / 100).toFixed(2)}</span>
+                        <span className="text-2xs text-ink-faint flex items-center gap-1">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                            <path d="M2 12S5 5 12 5s10 7 10 7-3 7-10 7-10-7-10-7Z" stroke="currentColor" strokeWidth="1.6" />
+                            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
+                          </svg>
+                          {l.view_count || 0}
+                        </span>
+                      </div>
                     </div>
+                  </Link>
 
-                    <div className="shrink-0 text-right">
-                      <p className="text-sm font-bold text-gold-400">${((l.price || 0) / 100).toFixed(2)}</p>
+                  {(idx + 1) % 6 === 0 && (
+                    <div className="my-3">
+                      <AdCarousel />
                     </div>
-                  </Card>
-                </Link>
-
-                {(idx + 1) % 6 === 0 && (
-                  <div className="mt-3">
-                    <AdCarousel />
-                  </div>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
