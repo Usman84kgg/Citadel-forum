@@ -40,14 +40,23 @@ export const marketDB = {
     type: string;
     imageUrl?: string | null;
   }) {
-    const { data: cat } = await supabase.from("listing_categories").select("id").eq("slug", data.categorySlug).single();
-    const { data: listing } = await supabase
+    const { data: cat, error: catError } = await supabase
+      .from("listing_categories")
+      .select("id")
+      .eq("slug", data.categorySlug)
+      .single();
+
+    if (catError || !cat) {
+      throw new Error(`Категория "${data.categorySlug}" не найдена: ${catError?.message || "нет данных"}`);
+    }
+
+    const { data: listing, error: insertError } = await supabase
       .from("listings")
       .insert({
         title: data.title,
         description: data.description,
         price: Math.round(data.price * 100),
-        category_id: cat?.id,
+        category_id: cat.id,
         seller_id: data.sellerId,
         type: data.type,
         status: "active",
@@ -55,6 +64,11 @@ export const marketDB = {
       })
       .select()
       .single();
+
+    if (insertError) {
+      throw new Error(`Ошибка создания объявления: ${insertError.message}`);
+    }
+
     return listing;
   },
 
