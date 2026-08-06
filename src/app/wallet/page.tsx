@@ -129,18 +129,22 @@ export default function WalletPage() {
                 </span>
                 <Badge
                   variant={
-                    item.status === "confirmed" || item.status === "paid"
+                    item.status === "confirmed" || item.status === "completed"
                       ? "success"
                       : item.status === "rejected"
                       ? "danger"
+                      : item.status === "approved"
+                      ? "info"
                       : "warning"
                   }
                   size="sm"
                 >
-                  {item.status === "confirmed" || item.status === "paid"
+                  {item.status === "confirmed" || item.status === "completed"
                     ? "Выполнено"
                     : item.status === "rejected"
                     ? "Отклонено"
+                    : item.status === "approved"
+                    ? "Одобрено"
                     : "В обработке"}
                 </Badge>
               </div>
