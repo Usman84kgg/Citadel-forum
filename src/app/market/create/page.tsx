@@ -46,22 +46,34 @@ export default function CreateListingPage() {
     setError("");
     setLoading(true);
 
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("description", description);
-    formData.append("price", price);
-    formData.append("categorySlug", categorySlug);
-    formData.append("type", type);
-    if (imageFile) formData.append("image", imageFile);
+    try {
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("description", description);
+      formData.append("price", price);
+      formData.append("categorySlug", categorySlug);
+      formData.append("type", type);
+      if (imageFile) formData.append("image", imageFile);
 
-    const res = await fetch("/api/market/listings", {
-      method: "POST",
-      body: formData,
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) { setError(data.error || "Ошибка"); return; }
-    router.push(`/market/${data.listing.id}`);
+      const res = await fetch("/api/market/listings", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Ошибка при публикации");
+        return;
+      }
+
+      router.push(`/market/${data.listing.id}`);
+    } catch (err: any) {
+      console.error("Ошибка публикации:", err);
+      setError("Не удалось опубликовать. Проверьте соединение и попробуйте снова.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
