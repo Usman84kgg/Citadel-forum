@@ -11,16 +11,19 @@ function generateSlug(title: string): string {
   return `${base || "listing"}-${suffix}`;
 }
 
-async function attachSellerNames<T extends { seller_id: string }>(rows: T[]) {
+async function attachSellerInfo<T extends { seller_id: string }>(rows: T[]) {
   const ids = Array.from(new Set(rows.map((r) => r.seller_id).filter(Boolean)));
-  if (ids.length === 0) return rows.map((r) => ({ ...r, seller_username: null }));
+  if (ids.length === 0) return rows.map((r) => ({ ...r, seller_username: null, seller_avatar_url: null }));
 
   try {
-    const { data } = await supabase.from("users").select("id, username").in("id", ids);
-    const map = new Map((data || []).map((u: any) => [u.id, u.username]));
-    return rows.map((r) => ({ ...r, seller_username: map.get(r.seller_id) || null }));
+    const { data } = await supabase.from("users").select("id, username, avatar_url").in("id", ids);
+    const map = new Map((data || []).map((u: any) => [u.id, u]));
+    return rows.map((r) => {
+      const u = map.get(r.seller_id);
+      return { ...r, seller_username: u?.username || null, seller_avatar_url: u?.avatar_url || null };
+    });
   } catch {
-    return rows.map((r) => ({ ...r, seller_username: null }));
+    return rows.map((r) => ({ ...r, seller_username: null, seller_avatar_url: null }));
   }
 }
 
@@ -32,13 +35,13 @@ export const marketDB = {
       if (cat) query = query.eq("category_id", cat.id);
     }
     const { data } = await query;
-    return attachSellerNames(data || []);
+    return attachSellerInfo(data || []);
   },
 
   async getListing(id: string) {
     const { data } = await supabase.from("listings").select("*").eq("id", id).single();
     if (!data) return null;
-    const [enriched] = await attachSellerNames([data]);
+    const [enriched] = await attachSellerInfo([data]);
     return enriched;
   },
 
@@ -91,6 +94,36 @@ export const marketDB = {
 
   async updateListingStatus(id: string, status: string) {
     const { data } = await supabase.from("listings").update({ status }).eq("id", id).select().single();
+    return data;
+  },
+
+  async getComments(listingId: string) {
+    const { data } = await supabase
+      .from("listing_comments")
+      .select("*")
+      .eq("listing_id", listingId)
+      .order("created_at", { ascending: true });
+
+    if (!data) return [];
+    const withNames = await attachSellerInfo(
+      data.map((c: any) => ({ ...c, seller_id: c.user_id }))
+    );
+    return withNames.map((c: any) => ({
+      id: c.id,
+      content: c.content,
+      createdAt: c.created_at,
+      username: c.seller_username,
+      avatarUrl: c.seller_avatar_url,
+    }));
+  },
+
+  async createComment(params: { listingId: string; userId: string; content: string }) {
+    const { data, error } = await supabase
+      .from("listing_comments")
+      .insert({ listing_id: params.listingId, user_id: params.userId, content: params.content })
+      .select()
+      .single();
+    if (error) throw new Error(`Ошибка добавления комментария: ${error.message}`);
     return data;
   },
 };
