@@ -1,5 +1,34 @@
-// src/lib/db/wallet.ts
 import { supabase } from "./supabase";
+
+async function getAccount(userId: string, type: "available" | "hold") {
+  const { data } = await supabase
+    .from("accounts")
+    .select("id, balance")
+    .eq("user_id", userId)
+    .eq("type", type)
+    .single();
+  return data;
+}
+
+async function ensureAccount(userId: string, type: "available" | "hold") {
+  const existing = await getAccount(userId, type);
+  if (existing) return existing;
+  const { data, error } = await supabase
+    .from("accounts")
+    .insert({ user_id: userId, type, balance: 0 })
+    .select("id, balance")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function setBalance(accountId: string, newBalance: number) {
+  const { error } = await supabase
+    .from("accounts")
+    .update({ balance: newBalance })
+    .eq("id", accountId);
+  if (error) throw error;
+}
 
 export const walletDB = {
   async getBalance(userId: string) {
@@ -122,6 +151,8 @@ export const walletDB = {
     return data || [];
   },
 
+  // ИСПРАВЛЕНО: теперь при создании заявки сумма реально замораживается
+  // (списывается из available, зачисляется в hold), а не просто создаётся запись.
   async createWithdrawal(params: {
     userId: string;
     currency: string;
@@ -129,6 +160,19 @@ export const walletDB = {
     method: string;
     addressTo: string;
   }) {
+    const { userId, amount } = params;
+
+    const availableAccount = await ensureAccount(userId, "available");
+    if (availableAccount.balance < amount) {
+      throw new Error("Недостаточно средств");
+    }
+
+    const holdAccount = await ensureAccount(userId, "hold");
+
+    // Списываем с available и переносим в hold — замораживаем деньги под заявку
+    await setBalance(availableAccount.id, availableAccount.balance - amount);
+    await setBalance(holdAccount.id, holdAccount.balance + amount);
+
     const { data, error } = await supabase
       .from("withdrawals")
       .insert({
@@ -186,25 +230,8 @@ export const walletDB = {
       .update({ status: "confirmed" })
       .eq("id", depositId);
 
-    const { data: account } = await supabase
-      .from("accounts")
-      .select("id, balance")
-      .eq("user_id", deposit.user_id)
-      .eq("type", "available")
-      .single();
-
-    if (account) {
-      await supabase
-        .from("accounts")
-        .update({ balance: account.balance + deposit.amount })
-        .eq("id", account.id);
-    } else {
-      await supabase.from("accounts").insert({
-        user_id: deposit.user_id,
-        type: "available",
-        balance: deposit.amount,
-      });
-    }
+    const account = await ensureAccount(deposit.user_id, "available");
+    await setBalance(account.id, account.balance + deposit.amount);
 
     return deposit;
   },
@@ -227,8 +254,9 @@ export const walletDB = {
     }));
   },
 
+  // ИСПРАВЛЕНО: approve/complete/reject теперь работают с hold, а не с available,
+  // потому что деньги уже заморожены на этапе createWithdrawal.
   async processWithdrawal(withdrawalId: string, action: string, txId?: string) {
-    // Получаем данные заявки перед обработкой
     const { data: w, error: fetchErr } = await supabase
       .from("withdrawals")
       .select("*")
@@ -237,68 +265,47 @@ export const walletDB = {
     if (fetchErr) throw fetchErr;
     if (!w) throw new Error("Заявка на вывод не найдена");
 
+    if (w.status !== "pending" && w.status !== "approved") {
+      throw new Error(`Заявка уже обработана (статус: ${w.status})`);
+    }
+
     if (action === "approve") {
-      // Просто меняем статус – при необходимости можно заблокировать средства в hold
+      // Деньги уже в hold с момента создания заявки — просто меняем статус
       const { error } = await supabase
         .from("withdrawals")
         .update({ status: "approved" })
         .eq("id", withdrawalId);
       if (error) throw error;
-      // TODO: реализовать перемещение суммы из available в hold, если hold используется
     } else if (action === "complete") {
-      // Помечаем как выплачено
+      const holdAccount = await getAccount(w.user_id, "hold");
+      if (!holdAccount || holdAccount.balance < w.amount) {
+        throw new Error("Недостаточно замороженных средств для завершения вывода");
+      }
+
       const { error: updErr } = await supabase
         .from("withdrawals")
         .update({ status: "completed", tx_id: txId || null })
         .eq("id", withdrawalId);
       if (updErr) throw updErr;
 
-      // Списываем сумму с баланса пользователя (available)
-      const { data: account } = await supabase
-        .from("accounts")
-        .select("id, balance")
-        .eq("user_id", w.user_id)
-        .eq("type", "available")
-        .single();
-
-      if (!account) {
-        throw new Error("Available account not found");
-      }
-      if (account.balance < w.amount) {
-        throw new Error("Недостаточно средств для выполнения вывода");
-      }
-
-      await supabase
-        .from("accounts")
-        .update({ balance: account.balance - w.amount })
-        .eq("id", account.id);
+      // Окончательно списываем из hold — деньги покидают систему
+      await setBalance(holdAccount.id, holdAccount.balance - w.amount);
     } else if (action === "reject") {
+      const holdAccount = await getAccount(w.user_id, "hold");
+      if (!holdAccount || holdAccount.balance < w.amount) {
+        throw new Error("Несоответствие замороженного баланса при отклонении заявки");
+      }
+
       const { error: updErr } = await supabase
         .from("withdrawals")
         .update({ status: "rejected" })
         .eq("id", withdrawalId);
       if (updErr) throw updErr;
 
-      // Возвращаем сумму на баланс пользователя
-      const { data: account } = await supabase
-        .from("accounts")
-        .select("id, balance")
-        .eq("user_id", w.user_id)
-        .eq("type", "available")
-        .single();
-
-      if (account) {
-        await supabase
-          .from("accounts")
-          .update({ balance: account.balance + w.amount })
-          .eq("id", account.id);
-      } else {
-        await supabase.from("accounts").insert({
-          user_id: w.user_id,
-          type: "available",
-          balance: w.amount,
-        });
-      }
+      // Возвращаем из hold обратно в available — размораживаем
+      const availableAccount = await ensureAccount(w.user_id, "available");
+      await setBalance(holdAccount.id, holdAccount.balance - w.amount);
+      await setBalance(availableAccount.id, availableAccount.balance + w.amount);
     } else {
       throw new Error(`Неизвестное действие: ${action}`);
     }
@@ -307,46 +314,17 @@ export const walletDB = {
   },
 
   async manualCredit(userId: string, amount: number) {
-    const { data: account } = await supabase
-      .from("accounts")
-      .select("id, balance")
-      .eq("user_id", userId)
-      .eq("type", "available")
-      .single();
-
-    if (account) {
-      await supabase
-        .from("accounts")
-        .update({ balance: account.balance + amount })
-        .eq("id", account.id);
-    } else {
-      await supabase.from("accounts").insert({
-        user_id: userId,
-        type: "available",
-        balance: amount,
-      });
-    }
-
+    const account = await ensureAccount(userId, "available");
+    await setBalance(account.id, account.balance + amount);
     return { success: true };
   },
 
   async manualDebit(userId: string, amount: number) {
-    const { data: account } = await supabase
-      .from("accounts")
-      .select("id, balance")
-      .eq("user_id", userId)
-      .eq("type", "available")
-      .single();
-
+    const account = await getAccount(userId, "available");
     if (!account || account.balance < amount) {
       return { success: false, error: "Недостаточно средств" };
     }
-
-    await supabase
-      .from("accounts")
-      .update({ balance: account.balance - amount })
-      .eq("id", account.id);
-
+    await setBalance(account.id, account.balance - amount);
     return { success: true };
   },
 };
