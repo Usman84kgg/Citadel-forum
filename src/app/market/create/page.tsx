@@ -67,10 +67,15 @@ export default function CreateListingPage() {
         return;
       }
 
+      if (!data.listing || !data.listing.id) {
+        setError("Сервер не вернул созданное объявление: " + JSON.stringify(data));
+        return;
+      }
+
       router.push(`/market/${data.listing.id}`);
     } catch (err: any) {
       console.error("Ошибка публикации:", err);
-      setError("Не удалось опубликовать. Проверьте соединение и попробуйте снова.");
+      setError("Ошибка: " + (err?.message || String(err)));
     } finally {
       setLoading(false);
     }
