@@ -14,6 +14,8 @@ interface Listing {
   type: string;
   status: string;
   seller_id: string;
+  seller_username: string | null;
+  image_url: string | null;
   view_count: number;
   created_at: string;
 }
@@ -25,11 +27,10 @@ export default function ListingPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/market/listings`)
-      .then(r => r.json())
+    fetch(`/api/market/listings/${id}`)
+      .then(r => r.ok ? r.json() : null)
       .then(data => {
-        const found = Array.isArray(data) ? data.find((l: Listing) => l.id === id) : null;
-        setListing(found || null);
+        setListing(data);
         setLoading(false);
       });
   }, [id]);
@@ -42,6 +43,12 @@ export default function ListingPage() {
       <Button variant="ghost" size="sm" onClick={() => router.push("/market")}>← Назад к маркету</Button>
 
       <Card padding="lg">
+        {listing.image_url ? (
+          <div className="h-56 w-full rounded-control overflow-hidden mb-4">
+            <img src={listing.image_url} alt={listing.title} className="h-full w-full object-cover" />
+          </div>
+        ) : null}
+
         <div className="flex items-start justify-between mb-3">
           <h1 className="font-display text-xl font-bold text-gold-400">{listing.title}</h1>
           <Badge variant={listing.type === "service" ? "info" : "warning"}>{listing.type === "service" ? "Услуга" : "Товар"}</Badge>
@@ -50,7 +57,9 @@ export default function ListingPage() {
         <div className="flex items-center justify-between mt-6 pt-4 border-t border-line-subtle">
           <div>
             <p className="font-display text-2xl font-bold text-gold-400">${((listing.price || 0) / 100).toFixed(2)}</p>
-            <p className="text-xs text-ink-muted mt-1">{listing.seller_id} · {new Date(listing.created_at).toLocaleDateString("ru-RU")} · {listing.view_count} просм.</p>
+            <p className="text-xs text-ink-muted mt-1">
+              {listing.seller_username || "Продавец"} · {new Date(listing.created_at).toLocaleDateString("ru-RU")} · {listing.view_count} просм.
+            </p>
           </div>
           <Button size="sm">Заказать</Button>
         </div>
