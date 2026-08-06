@@ -1,5 +1,18 @@
 import { supabase } from "./supabase";
 
+async function attachSellerNames<T extends { seller_id: string }>(rows: T[]) {
+  const ids = Array.from(new Set(rows.map((r) => r.seller_id).filter(Boolean)));
+  if (ids.length === 0) return rows.map((r) => ({ ...r, seller_username: null }));
+
+  try {
+    const { data } = await supabase.from("users").select("id, username").in("id", ids);
+    const map = new Map((data || []).map((u: any) => [u.id, u.username]));
+    return rows.map((r) => ({ ...r, seller_username: map.get(r.seller_id) || null }));
+  } catch {
+    return rows.map((r) => ({ ...r, seller_username: null }));
+  }
+}
+
 export const marketDB = {
   async getListings(category?: string) {
     let query = supabase.from("listings").select("*").eq("status", "active").order("created_at", { ascending: false });
@@ -8,25 +21,40 @@ export const marketDB = {
       if (cat) query = query.eq("category_id", cat.id);
     }
     const { data } = await query;
-    return data || [];
+    return attachSellerNames(data || []);
   },
 
   async getListing(id: string) {
     const { data } = await supabase.from("listings").select("*").eq("id", id).single();
-    return data;
+    if (!data) return null;
+    const [enriched] = await attachSellerNames([data]);
+    return enriched;
   },
 
-  async createListing(data: { title: string; description: string; price: number; categorySlug: string; sellerId: string; type: string }) {
+  async createListing(data: {
+    title: string;
+    description: string;
+    price: number;
+    categorySlug: string;
+    sellerId: string;
+    type: string;
+    imageUrl?: string | null;
+  }) {
     const { data: cat } = await supabase.from("listing_categories").select("id").eq("slug", data.categorySlug).single();
-    const { data: listing } = await supabase.from("listings").insert({
-      title: data.title,
-      description: data.description,
-      price: Math.round(data.price * 100),
-      category_id: cat?.id,
-      seller_id: data.sellerId,
-      type: data.type,
-      status: "active",
-    }).select().single();
+    const { data: listing } = await supabase
+      .from("listings")
+      .insert({
+        title: data.title,
+        description: data.description,
+        price: Math.round(data.price * 100),
+        category_id: cat?.id,
+        seller_id: data.sellerId,
+        type: data.type,
+        status: "active",
+        image_url: data.imageUrl || null,
+      })
+      .select()
+      .single();
     return listing;
   },
 
