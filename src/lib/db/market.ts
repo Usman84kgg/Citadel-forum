@@ -1,5 +1,16 @@
 import { supabase } from "./supabase";
 
+function generateSlug(title: string): string {
+  const base = title
+    .toLowerCase()
+    .trim()
+    .replace(/[^\wа-яё\s-]/gi, "")
+    .replace(/\s+/g, "-")
+    .slice(0, 60);
+  const suffix = Math.random().toString(36).slice(2, 8);
+  return `${base || "listing"}-${suffix}`;
+}
+
 async function attachSellerNames<T extends { seller_id: string }>(rows: T[]) {
   const ids = Array.from(new Set(rows.map((r) => r.seller_id).filter(Boolean)));
   if (ids.length === 0) return rows.map((r) => ({ ...r, seller_username: null }));
@@ -54,6 +65,7 @@ export const marketDB = {
       .from("listings")
       .insert({
         title: data.title,
+        slug: generateSlug(data.title),
         description: data.description,
         price: Math.round(data.price * 100),
         category_id: cat.id,
