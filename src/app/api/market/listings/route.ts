@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { marketDB } from "@/lib/db/market";
+import { supabase } from "@/lib/db/supabase";
 
 const SECRET = new TextEncoder().encode(process.env.AUTH_SECRET || "citadel-dev-secret-change-in-production");
 
@@ -17,13 +18,45 @@ export async function POST(request: Request) {
 
   try {
     const { payload } = await jwtVerify(token, SECRET);
-    const { title, description, price, categorySlug, type } = await request.json();
+
+    const formData = await request.formData();
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+    const price = parseFloat(formData.get("price") as string);
+    const categorySlug = formData.get("categorySlug") as string;
+    const type = formData.get("type") as string;
+    const file = formData.get("image") as File | null;
+
+    let imageUrl: string | null = null;
+
+    if (file && file.size > 0) {
+      const ext = file.name.split(".").pop() || "jpg";
+      const fileName = `${crypto.randomUUID()}.${ext}`;
+      const buffer = await file.arrayBuffer();
+
+      const { error: uploadError } = await supabase.storage
+        .from("listing-images")
+        .upload(fileName, buffer, { contentType: file.type, upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("listing-images").getPublicUrl(fileName);
+      imageUrl = urlData.publicUrl;
+    }
+
     const listing = await marketDB.createListing({
-      title, description, price, categorySlug, type,
+      title,
+      description,
+      price,
+      categorySlug,
+      type,
       sellerId: payload.sub as string,
+      imageUrl,
     });
+
     return NextResponse.json({ success: true, listing });
-  } catch {
-    return NextResponse.json({ error: "Ошибка" }, { status: 500 });
+  } catch (e: any) {
+    console.error("createListing error:", e);
+    return NextResponse.json({ error: e.message || "Ошибка" }, { status: 500 });
   }
 }
