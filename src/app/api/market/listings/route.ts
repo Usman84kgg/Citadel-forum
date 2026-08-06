@@ -35,12 +35,12 @@ export async function POST(request: Request) {
       const buffer = await file.arrayBuffer();
 
       const { error: uploadError } = await supabase.storage
-        .from("listing-images")
+        .from("listing-image")
         .upload(fileName, buffer, { contentType: file.type, upsert: false });
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage.from("listing-images").getPublicUrl(fileName);
+      const { data: urlData } = supabase.storage.from("listing-image").getPublicUrl(fileName);
       imageUrl = urlData.publicUrl;
     }
 
