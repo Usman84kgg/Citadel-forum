@@ -20,6 +20,8 @@ export default function CreateListingPage() {
   const [price, setPrice] = useState("");
   const [categorySlug, setCategorySlug] = useState("");
   const [type, setType] = useState("service");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -29,14 +31,32 @@ export default function CreateListingPage() {
 
   const selectedCategory = categories.find((c) => c.slug === categorySlug);
 
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] || null;
+    setImageFile(file);
+    if (file) {
+      setImagePreview(URL.createObjectURL(file));
+    } else {
+      setImagePreview(null);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
+
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("description", description);
+    formData.append("price", price);
+    formData.append("categorySlug", categorySlug);
+    formData.append("type", type);
+    if (imageFile) formData.append("image", imageFile);
+
     const res = await fetch("/api/market/listings", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, description, price: parseFloat(price), categorySlug, type }),
+      body: formData,
     });
     const data = await res.json();
     setLoading(false);
@@ -57,6 +77,18 @@ export default function CreateListingPage() {
 
       <Card padding="lg">
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="text-xs text-ink-muted mb-1 block">Фото объявления</label>
+            <label className="flex items-center justify-center h-40 rounded-control border border-dashed border-line-subtle bg-surface cursor-pointer overflow-hidden">
+              {imagePreview ? (
+                <img src={imagePreview} alt="Превью" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-xs text-ink-muted">Нажмите, чтобы выбрать фото</span>
+              )}
+              <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+            </label>
+          </div>
+
           <div>
             <label className="text-xs text-ink-muted mb-1 block">Категория</label>
             <select
